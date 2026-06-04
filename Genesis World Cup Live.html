@@ -1,0 +1,1993 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>FIFA World Cup 2026 — Prediction Game</title>
+  <style>
+    * {{ box-sizing: border-box; margin: 0; padding: 0; }}
+    html, body {{ min-height: 100%; }}
+    body {{ background: #0a1733; }}
+    #root-loading {{
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; min-height: 100vh;
+      color: #9db0d6; font-family: sans-serif; gap: 12px;
+    }}
+    .spinner {{
+      width: 32px; height: 32px; border: 3px solid #27406f;
+      border-top-color: #f4c430; border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }}
+    @keyframes spin {{ to {{ transform: rotate(360deg); }} }}
+  </style>
+
+  <!-- React 18 -->
+  <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <!-- Babel (compiles JSX in the browser — takes ~3 seconds on first load) -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
+</head>
+<body>
+  <div id="root">
+    <div id="root-loading">
+      <div class="spinner"></div>
+      <div>Loading World Cup 2026 Predictions…</div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       STEP 1 — PASTE YOUR FIREBASE CONFIG BELOW
+       Get this from:  Firebase Console → Your Project
+                       → Project Settings (gear icon) → Your apps
+                       → Web app → SDK setup and configuration
+       ============================================================ -->
+  <script>
+    var firebaseConfig = {{
+      apiKey:            "AIzaSyCbBo8Tgv3wp5pGWZWoCpxnkvVTPsJp05U",
+      authDomain:        "genesis-world-cup.firebaseapp.com",
+      databaseURL:       "https://genesis-world-cup-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId:         "genesis-world-cup",
+      storageBucket:     "genesis-world-cup.firebasestorage.app",
+      messagingSenderId: "872426143339",
+      appId:             "1:872426143339:web:330745b297e1be849e7b2e"
+    }};
+    // ============================================================
+
+    var __configured = firebaseConfig.apiKey !== "AIzaSyCbBo8Tgv3wp5pGWZWoCpxnkvVTPsJp05U";
+    if (__configured) {{
+      firebase.initializeApp(firebaseConfig);
+      window.__db = firebase.database();
+    }} else {{
+      window.__db = null;
+    }}
+  </script>
+
+  <!-- App code (Babel compiles this from JSX to plain JS automatically) -->
+  <script type="text/babel" data-presets="react">
+    const { useState, useEffect, useRef, Fragment } = React;
+
+    /* ============================================================
+       FIFA WORLD CUP 2026 — PREDICTION GAME
+       MODE = "live"  -> real deadlines, manual results entry
+       MODE = "trial" -> manual stage advancement, mock results
+       ============================================================ */
+    const MODE = "live"; // "live" or "trial"
+    const IS_TRIAL = MODE === "trial";
+
+    const DB_PREFIX = IS_TRIAL ? "wc26_trial" : "wc26_live";
+    const db = window.__db; // Firebase Realtime Database instance
+
+    /* ---------- Static tournament data (hardcoded per the rules document) ---------- */
+    const TEAMS = [
+      { name: "Algeria", rank: 28, tier: 1 },
+      { name: "Argentina", rank: 3, tier: 1 },
+      { name: "Australia", rank: 27, tier: 1 },
+      { name: "Austria", rank: 23, tier: 1 },
+      { name: "Belgium", rank: 9, tier: 1 },
+      { name: "Bosnia and Herzegovina", rank: 64, tier: 2 },
+      { name: "Brazil", rank: 6, tier: 1 },
+      { name: "Cabo Verde", rank: 68, tier: 2 },
+      { name: "Canada", rank: 30, tier: 1 },
+      { name: "Colombia", rank: 13, tier: 1 },
+      { name: "Congo DR", rank: 133, tier: 3 },
+      { name: "Cote d'Ivoire", rank: 34, tier: 2 },
+      { name: "Croatia", rank: 11, tier: 1 },
+      { name: "Curacao", rank: 83, tier: 3 },
+      { name: "Czechia", rank: 41, tier: 2 },
+      { name: "Ecuador", rank: 24, tier: 1 },
+      { name: "Egypt", rank: 29, tier: 1 },
+      { name: "England", rank: 4, tier: 1 },
+      { name: "France", rank: 1, tier: 1 },
+      { name: "Germany", rank: 10, tier: 1 },
+      { name: "Ghana", rank: 73, tier: 2 },
+      { name: "Haiti", rank: 82, tier: 3 },
+      { name: "Iraq", rank: 57, tier: 2 },
+      { name: "Iran", rank: 21, tier: 1 },
+      { name: "Japan", rank: 18, tier: 1 },
+      { name: "Jordan", rank: 63, tier: 2 },
+      { name: "Mexico", rank: 15, tier: 1 },
+      { name: "Morocco", rank: 7, tier: 1 },
+      { name: "Netherlands", rank: 8, tier: 1 },
+      { name: "New Zealand", rank: 85, tier: 3 },
+      { name: "Norway", rank: 31, tier: 2 },
+      { name: "Panama", rank: 33, tier: 2 },
+      { name: "Paraguay", rank: 40, tier: 2 },
+      { name: "Portugal", rank: 5, tier: 1 },
+      { name: "Qatar", rank: 55, tier: 2 },
+      { name: "Saudi Arabia", rank: 61, tier: 2 },
+      { name: "Scotland", rank: 43, tier: 2 },
+      { name: "Senegal", rank: 14, tier: 1 },
+      { name: "South Africa", rank: 60, tier: 2 },
+      { name: "South Korea", rank: 25, tier: 1 },
+      { name: "Spain", rank: 2, tier: 1 },
+      { name: "Sweden", rank: 38, tier: 2 },
+      { name: "Switzerland", rank: 19, tier: 1 },
+      { name: "Tunisia", rank: 46, tier: 2 },
+      { name: "Turkey", rank: 22, tier: 1 },
+      { name: "Uruguay", rank: 17, tier: 1 },
+      { name: "USA", rank: 16, tier: 1 },
+      { name: "Uzbekistan", rank: 50, tier: 2 },
+    ];
+
+    // Previous World Cup winners (only those that qualified appear in TEAMS; Italy did not qualify)
+    const PREVIOUS_WINNERS = new Set([
+      "Brazil", "Germany", "Italy", "Argentina", "France", "Uruguay", "England", "Spain",
+    ]);
+
+    const TIER_POINTS = { 1: 1, 2: 2, 3: 3 };
+
+    const KNOCKOUT_POINTS = { r32: 2, r16: 4, qf: 7, sf: 12, third: 15, final: 25 };
+    const ROUND_MATCHES = { r32: 16, r16: 8, qf: 4, sf: 2, third: 1, final: 1 };
+
+    // Deadlines in Singapore Standard Time (GMT+8)
+    const DEADLINES = {
+      pre: "2026-06-12T02:00:00+08:00",
+      group: "2026-06-12T02:00:00+08:00",
+      r32: "2026-06-29T02:00:00+08:00",
+      r16: "2026-07-05T00:00:00+08:00",
+      qf: "2026-07-10T03:00:00+08:00",
+      sf: "2026-07-15T02:00:00+08:00",
+      third: "2026-07-19T04:00:00+08:00",
+      final: "2026-07-20T02:00:00+08:00",
+    };
+
+    const STAGE_LABELS = {
+      pre: "Champion Pick",
+      group: "Group Stage",
+      r32: "Round of 32",
+      r16: "Round of 16",
+      qf: "Quarter-Finals",
+      sf: "Semi-Finals",
+      third: "3rd Place Match",
+      final: "Final",
+    };
+
+    const ALL_STAGES = ["pre", "group", "r32", "r16", "qf", "sf", "third", "final"];
+    const KNOCKOUT_ROUNDS = ["r32", "r16", "qf", "sf", "third", "final"];
+
+    // Trial advancement sequence (pre + group are one pre-tournament step)
+    const TRIAL_SEQ = ["pre", "r32", "r16", "qf", "sf", "third", "final", "done"];
+
+    const TEAM_BY_NAME = Object.fromEntries(TEAMS.map((t) => [t.name, t]));
+
+    /* ---------- Mock data for TRIAL mode ---------- */
+    const MOCK_QUALIFIERS = [
+      "Algeria", "Argentina", "Australia", "Austria", "Belgium", "Brazil", "Canada",
+      "Colombia", "Croatia", "Ecuador", "Egypt", "England", "France", "Germany",
+      "Iran", "Japan", "Mexico", "Morocco", "Netherlands", "Portugal", "Senegal",
+      "South Korea", "Spain", "Switzerland", "Turkey", "Uruguay", "USA",
+      "Norway", "Panama", "Paraguay", "Sweden", "Uzbekistan",
+    ];
+    function betterTeam(a, b) {
+      return TEAM_BY_NAME[a].rank <= TEAM_BY_NAME[b].rank ? a : b;
+    }
+
+    /* ---------- Theme ---------- */
+    const C = {
+      navy: "#0a1733",
+      navy2: "#0e2350",
+      panel: "#13294f",
+      panel2: "#1b3566",
+      line: "#27406f",
+      red: "#e63946",
+      gold: "#f4c430",
+      white: "#f5f7fb",
+      muted: "#9db0d6",
+      green: "#3ec96b",
+    };
+    const FONT =
+      '"Trebuchet MS", "Segoe UI", Roboto, system-ui, -apple-system, sans-serif';
+
+    /* ---------- Storage wrapper (always shared so all players share one game) ---------- */
+    /* ---------- Firebase database helpers ---------- */
+    async function fbGetConfig() {
+      try {
+        const snap = await db.ref(`${DB_PREFIX}/config`).get();
+        return snap.exists() ? snap.val() : null;
+      } catch { return null; }
+    }
+    async function fbSetConfig(val) {
+      try { await db.ref(`${DB_PREFIX}/config`).set(val); return true; }
+      catch { return false; }
+    }
+    async function fbGetPlayers() {
+      try {
+        const snap = await db.ref(`${DB_PREFIX}/players`).get();
+        return snap.exists() ? Object.values(snap.val() || {}) : [];
+      } catch { return []; }
+    }
+    async function fbSavePlayer(p) {
+      try { await db.ref(`${DB_PREFIX}/players/${p.key}`).set(p); return true; }
+      catch { return false; }
+    }
+    async function fbResetAll() {
+      try { await db.ref(DB_PREFIX).remove(); return true; }
+      catch { return false; }
+    }
+
+    /* ---------- Helpers ---------- */
+    function defaultConfig() {
+      return {
+        groupQualifiers: null, // array of 32 team names once entered
+        fixtures: { r32: [], r16: [], qf: [], sf: [], third: [], final: [] },
+        confirmed: { r32: false, r16: false, qf: false, sf: false, third: false, final: false },
+        resultsEntered: {
+          group: false, r32: false, r16: false, qf: false, sf: false, third: false, final: false,
+        },
+        overrides: {}, // { playerKey: { stage: deltaPoints } }
+        unlocked: {}, // { stage: true } -> admin manually reopened a locked stage
+        trialStage: "pre", // trial only
+      };
+    }
+
+    function isPreviousWinner(name) {
+      return PREVIOUS_WINNERS.has(name);
+    }
+
+    function fmtSGT(iso) {
+      // Display the fixed SGT wall-clock from the ISO string
+      const d = new Date(iso);
+      const opts = {
+        timeZone: "Asia/Singapore",
+        day: "2-digit", month: "short", year: "numeric",
+        hour: "2-digit", minute: "2-digit", hour12: true,
+      };
+      return d.toLocaleString("en-GB", opts) + " SGT";
+    }
+
+    function trialIdx(stage) {
+      if (stage === "group") stage = "pre";
+      return TRIAL_SEQ.indexOf(stage);
+    }
+
+    // Natural lock state (by deadline in live, by stage pointer in trial), ignoring any admin override
+    function isLockedBase(stage, config, now) {
+      if (IS_TRIAL) {
+        return trialIdx(stage) < TRIAL_SEQ.indexOf(config.trialStage);
+      }
+      return now >= new Date(DEADLINES[stage]).getTime();
+    }
+
+    // Is a stage's deadline passed / advanced past (locked, read-only)?
+    // An admin "unlock" override reopens a stage even after it would normally be locked.
+    function isLocked(stage, config, now) {
+      if (config.unlocked && config.unlocked[stage]) return false;
+      return isLockedBase(stage, config, now);
+    }
+
+    // Prerequisite stage that must be locked before a knockout round can open
+    const PREREQ = { r32: "group", r16: "r32", qf: "r16", sf: "qf", third: "sf", final: "sf" };
+
+    // Is a stage currently open for predictions?
+    function isOpen(stage, config, now) {
+      if (isLocked(stage, config, now)) return false;
+      const overridden = config.unlocked && config.unlocked[stage];
+      if (IS_TRIAL && !overridden) {
+        const current = trialIdx(stage) === TRIAL_SEQ.indexOf(config.trialStage);
+        if (!current) return false;
+      }
+      if (PREREQ[stage]) {
+        // previous stage must be done
+        if (!isLockedBase(PREREQ[stage], config, now)) return false;
+        // bracket must be confirmed and populated
+        if (!config.confirmed[stage]) return false;
+        if (!config.fixtures[stage] || config.fixtures[stage].length === 0) return false;
+      }
+      return true;
+    }
+
+    // Status string for admin stage management
+    function stageStatus(stage, config, now) {
+      if (config.unlocked && config.unlocked[stage]) {
+        return { label: "Reopened by admin (editable)", color: C.gold };
+      }
+      if (isOpen(stage, config, now)) return { label: "Open for predictions", color: C.green };
+      if (isLocked(stage, config, now)) {
+        if (config.resultsEntered[stage]) return { label: "Results entered / complete", color: C.gold };
+        return { label: "Deadline passed (awaiting results)", color: C.red };
+      }
+      // not open, not locked
+      if (PREREQ[stage] && !config.confirmed[stage]) {
+        return { label: "Bracket not yet confirmed", color: C.muted };
+      }
+      return { label: "Upcoming", color: C.muted };
+    }
+
+    function emptyPlayer(name) {
+      return {
+        name,
+        key: name.trim().toLowerCase(),
+        pre: null,
+        group: [],
+        r32: {}, r16: {}, qf: {}, sf: {}, third: {}, final: {},
+      };
+    }
+
+    // Has a player fully completed their predictions for a given stage?
+    function stageComplete(player, stage, config) {
+      if (stage === "pre") return !!player.pre;
+      if (stage === "group") return (player.group || []).length === 32;
+      const fx = config.fixtures[stage] || [];
+      if (fx.length === 0) return false;
+      const picks = player[stage] || {};
+      return fx.every((m) => picks[m.id]);
+    }
+
+    /* ---------- Scoring ---------- */
+    function scorePlayer(player, config) {
+      const s = { pre: 0, group: 0, r32: 0, r16: 0, qf: 0, sf: 0, third: 0, final: 0 };
+
+      const finalFx = config.fixtures.final || [];
+      const champion = config.resultsEntered.final && finalFx[0] ? finalFx[0].winner : null;
+
+      // Pre-tournament champion
+      if (champion && player.pre === champion) {
+        s.pre = isPreviousWinner(champion) ? 25 : 75;
+      }
+
+      // Group stage
+      if (config.resultsEntered.group && config.groupQualifiers) {
+        const q = new Set(config.groupQualifiers);
+        for (const t of player.group || []) {
+          if (q.has(t)) s.group += TIER_POINTS[TEAM_BY_NAME[t].tier];
+        }
+      }
+
+      // Knockout rounds
+      for (const rd of KNOCKOUT_ROUNDS) {
+        if (config.resultsEntered[rd]) {
+          for (const m of config.fixtures[rd] || []) {
+            if (m.winner && player[rd] && player[rd][m.id] === m.winner) {
+              s[rd] += KNOCKOUT_POINTS[rd];
+            }
+          }
+        }
+      }
+
+      // Manual overrides (delta adjustments)
+      const ov = (config.overrides && config.overrides[player.key]) || {};
+      for (const k of Object.keys(ov)) {
+        if (s[k] === undefined) s[k] = 0;
+        s[k] += ov[k];
+      }
+
+      const total = Object.values(s).reduce((a, b) => a + b, 0);
+
+      // Most recent scored stage
+      let recentStage = null;
+      for (const st of ALL_STAGES) {
+        if (config.resultsEntered[st]) recentStage = st;
+      }
+      const recentPoints = recentStage ? s[recentStage] : 0;
+
+      // Tiebreaker metrics
+      const finalTeams = new Set();
+      (config.fixtures.final || []).forEach((m) => {
+        if (m.teamA) finalTeams.add(m.teamA);
+        if (m.teamB) finalTeams.add(m.teamB);
+      });
+      const sfTeams = new Set();
+      (config.fixtures.sf || []).forEach((m) => {
+        if (m.teamA) sfTeams.add(m.teamA);
+        if (m.teamB) sfTeams.add(m.teamB);
+      });
+      const qfTeams = new Set();
+      (config.fixtures.qf || []).forEach((m) => {
+        if (m.teamA) qfTeams.add(m.teamA);
+        if (m.teamB) qfTeams.add(m.teamB);
+      });
+
+      const sfPicks = Object.values(player.sf || {});
+      const qfPicks = Object.values(player.qf || {});
+      const r16Picks = Object.values(player.r16 || {});
+
+      const tb1 = champion && player.pre === champion ? 1 : 0;
+      const tb2 =
+        finalTeams.size === 2 && sfPicks.length === 2 && sfPicks.every((p) => finalTeams.has(p))
+          ? 1 : 0;
+      const tb3 = qfPicks.filter((p) => sfTeams.has(p)).length; // semi-finalists predicted
+      const tb4 = r16Picks.filter((p) => qfTeams.has(p)).length; // quarter-finalists predicted
+
+      return { byStage: s, total, recentStage, recentPoints, tb: { tb1, tb2, tb3, tb4 } };
+    }
+
+    function rankPlayers(players, config) {
+      const scored = players.map((p) => ({ player: p, score: scorePlayer(p, config) }));
+      scored.sort((a, b) => {
+        if (b.score.total !== a.score.total) return b.score.total - a.score.total;
+        if (b.score.tb.tb1 !== a.score.tb.tb1) return b.score.tb.tb1 - a.score.tb.tb1;
+        if (b.score.tb.tb2 !== a.score.tb.tb2) return b.score.tb.tb2 - a.score.tb.tb2;
+        if (b.score.tb.tb3 !== a.score.tb.tb3) return b.score.tb.tb3 - a.score.tb.tb3;
+        if (b.score.tb.tb4 !== a.score.tb.tb4) return b.score.tb.tb4 - a.score.tb.tb4;
+        return a.player.name.localeCompare(b.player.name);
+      });
+      // assign ranks; fully-tied players share a rank
+      const fullyTied = (x, y) =>
+        x.score.total === y.score.total &&
+        x.score.tb.tb1 === y.score.tb.tb1 &&
+        x.score.tb.tb2 === y.score.tb.tb2 &&
+        x.score.tb.tb3 === y.score.tb.tb3 &&
+        x.score.tb.tb4 === y.score.tb.tb4;
+      let rank = 0, shown = 0;
+      return scored.map((row, i) => {
+        shown++;
+        if (i === 0 || !fullyTied(row, scored[i - 1])) rank = shown;
+        const shared = scored.some((o, j) => j !== i && fullyTied(o, row));
+        return { ...row, rank, shared };
+      });
+    }
+
+    /* ============================================================
+       UI primitives
+       ============================================================ */
+    function Badge({ children, color, bg }) {
+      return (
+        <span style={{
+          display: "inline-block", padding: "2px 8px", borderRadius: 999, fontSize: 11,
+          fontWeight: 700, letterSpacing: 0.3, color: color || C.navy,
+          background: bg || C.gold, whiteSpace: "nowrap",
+        }}>{children}</span>
+      );
+    }
+
+    function Btn({ children, onClick, variant = "primary", disabled, style }) {
+      const styles = {
+        primary: { background: C.red, color: "#fff", border: "none" },
+        gold: { background: C.gold, color: C.navy, border: "none" },
+        ghost: { background: "transparent", color: C.white, border: `1px solid ${C.line}` },
+        dark: { background: C.panel2, color: C.white, border: `1px solid ${C.line}` },
+      };
+      return (
+        <button onClick={onClick} disabled={disabled} style={{
+          padding: "11px 16px", borderRadius: 10, fontWeight: 700, fontSize: 14,
+          cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.45 : 1,
+          fontFamily: FONT, ...styles[variant], ...style,
+        }}>{children}</button>
+      );
+    }
+
+    function Card({ children, style }) {
+      return (
+        <div style={{
+          background: C.panel, border: `1px solid ${C.line}`, borderRadius: 14,
+          padding: 16, marginBottom: 14, ...style,
+        }}>{children}</div>
+      );
+    }
+
+    function Countdown({ iso }) {
+      const [now, setNow] = useState(Date.now());
+      useEffect(() => {
+        const t = setInterval(() => setNow(Date.now()), 1000);
+        return () => clearInterval(t);
+      }, []);
+      const diff = new Date(iso).getTime() - now;
+      if (diff <= 0) return <span style={{ color: C.red, fontWeight: 700 }}>Deadline passed</span>;
+      const d = Math.floor(diff / 86400000);
+      const h = Math.floor((diff % 86400000) / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      const s = Math.floor((diff % 60000) / 1000);
+      return (
+        <span style={{ color: C.gold, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>
+          {d}d {h}h {m}m {s}s
+        </span>
+      );
+    }
+
+    /* ============================================================
+       MAIN APP
+       ============================================================ */
+    function App() {
+      const [config, setConfig] = useState(null);
+      const [players, setPlayers] = useState([]);
+      const [session, setSession] = useState(null); // {type:'player', key, name} | {type:'admin'}
+      const [screen, setScreen] = useState("login");
+      const [loading, setLoading] = useState(true);
+      const [now, setNow] = useState(Date.now());
+
+      const [nameInput, setNameInput] = useState("");
+      const [pinInput, setPinInput] = useState("");
+      const [loginErr, setLoginErr] = useState("");
+      const [toast, setToast] = useState("");
+      const toastTimer = useRef(null);
+
+      function showToast(msg) {
+        setToast(msg);
+        if (toastTimer.current) clearTimeout(toastTimer.current);
+        toastTimer.current = setTimeout(() => setToast(""), 2800);
+      }
+
+      // live clock for lock checks
+      useEffect(() => {
+        const t = setInterval(() => setNow(Date.now()), 1000);
+        return () => clearInterval(t);
+      }, []);
+
+      async function loadAll() {
+        const [cfg, ps] = await Promise.all([fbGetConfig(), fbGetPlayers()]);
+        let c = cfg || defaultConfig();
+        c = { ...defaultConfig(), ...c };
+        c.fixtures = { ...defaultConfig().fixtures, ...(c.fixtures || {}) };
+        c.confirmed = { ...defaultConfig().confirmed, ...(c.confirmed || {}) };
+        c.resultsEntered = { ...defaultConfig().resultsEntered, ...(c.resultsEntered || {}) };
+        c.unlocked = { ...(c.unlocked || {}) };
+        setConfig(c);
+        setPlayers(ps);
+      }
+
+      // Initial load + real-time listeners so all devices see changes instantly
+      useEffect(() => {
+        if (!db) { setLoading(false); return; }
+        setLoading(true);
+        const cfgRef = db.ref(`${DB_PREFIX}/config`);
+        const plRef  = db.ref(`${DB_PREFIX}/players`);
+        cfgRef.on("value", snap => {
+          let c = snap.exists() ? snap.val() : defaultConfig();
+          c = { ...defaultConfig(), ...c };
+          c.fixtures = { ...defaultConfig().fixtures, ...(c.fixtures || {}) };
+          c.confirmed = { ...defaultConfig().confirmed, ...(c.confirmed || {}) };
+          c.resultsEntered = { ...defaultConfig().resultsEntered, ...(c.resultsEntered || {}) };
+          c.unlocked = { ...(c.unlocked || {}) };
+          setConfig(c);
+          setLoading(false);
+        });
+        plRef.on("value", snap => {
+          setPlayers(snap.exists() ? Object.values(snap.val() || {}) : []);
+        });
+        return () => { cfgRef.off(); plRef.off(); };
+      }, []);
+
+      async function saveConfig(next) {
+        setConfig(next); // optimistic local update
+        await fbSetConfig(next);
+      }
+      async function savePlayer(p) {
+        // optimistic local update, Firebase listener will confirm
+        setPlayers(prev => [...prev.filter(x => x.key !== p.key), p]);
+        await fbSavePlayer(p);
+      }
+      async function savePlayerNotify(p) {
+        await savePlayer(p);
+        showToast("✓ Your predictions have been successfully placed!");
+      }
+
+      const currentPlayer = session && session.type === "player"
+        ? players.find((p) => p.key === session.key) || null
+        : null;
+
+      /* ---------- Login ---------- */
+      async function doPlayerLogin() {
+        const nm = nameInput.trim();
+        if (!nm) { setLoginErr("Please enter your name."); return; }
+        const key = nm.toLowerCase();
+        let p = players.find((x) => x.key === key);
+        if (!p) {
+          p = emptyPlayer(nm);
+          await savePlayer(p);
+        }
+        setSession({ type: "player", key, name: p.name });
+        setScreen("home");
+        setNameInput(""); setLoginErr("");
+      }
+      function doAdminLogin() {
+        if (pinInput.trim() === "2026") {
+          setSession({ type: "admin" });
+          setScreen("admin");
+          setPinInput(""); setLoginErr("");
+        } else {
+          setLoginErr("Incorrect PIN.");
+        }
+      }
+      function logout() {
+        setSession(null);
+        setScreen("login");
+      }
+
+      if (loading) {
+        return <Shell><div style={{ textAlign: "center", padding: 60, color: C.muted }}>Connecting to database…</div></Shell>;
+      }
+      if (!db) {
+        return (
+          <Shell>
+            <Card>
+              <h2 style={{ color: C.red, marginTop: 0 }}>Firebase not configured</h2>
+              <p style={{ color: C.muted }}>
+                Open the HTML file in a text editor and paste your Firebase config into the marked section near the top, then save and re-upload to GitHub.
+              </p>
+            </Card>
+          </Shell>
+        );
+      }
+
+      /* ============================================================ */
+      return (
+        <Shell>
+          {IS_TRIAL && <TrialBanner />}
+          <Header
+            session={session}
+            currentPlayer={currentPlayer}
+            config={config}
+            onLogout={logout}
+            onHome={() => setScreen(session?.type === "admin" ? "admin" : "home")}
+          />
+          <Toast msg={toast} />
+          {screen === "login" && (
+            <LoginScreen
+              nameInput={nameInput} setNameInput={setNameInput}
+              pinInput={pinInput} setPinInput={setPinInput}
+              onPlayer={doPlayerLogin} onAdmin={doAdminLogin}
+              err={loginErr}
+            />
+          )}
+
+          {screen === "home" && currentPlayer && (
+            <PlayerHome
+              player={currentPlayer} players={players} config={config} now={now}
+              onOpenStage={(st) => setScreen(st)}
+              onLeaderboard={() => setScreen("leaderboard")}
+              onPredictions={() => setScreen("predictions")}
+              onRefresh={loadAll}
+            />
+          )}
+
+          {screen === "pre" && currentPlayer && (
+            <ChampionPick player={currentPlayer} players={players} config={config} now={now}
+              onSave={savePlayerNotify} onBack={() => setScreen("home")} />
+          )}
+          {screen === "group" && currentPlayer && (
+            <GroupStage player={currentPlayer} players={players} config={config} now={now}
+              onSave={savePlayerNotify} onBack={() => setScreen("home")} />
+          )}
+          {KNOCKOUT_ROUNDS.includes(screen) && currentPlayer && (
+            <KnockoutStage round={screen} player={currentPlayer} players={players}
+              config={config} now={now} onSave={savePlayerNotify} onBack={() => setScreen("home")} />
+          )}
+
+          {screen === "predictions" && (
+            <AllPredictions players={players} config={config} now={now}
+              onBack={() => setScreen("home")} onRefresh={loadAll} />
+          )}
+
+          {screen === "leaderboard" && (
+            <Leaderboard players={players} config={config} now={now}
+              onBack={() => setScreen(session?.type === "admin" ? "admin" : "home")}
+              onRefresh={loadAll} />
+          )}
+
+          {screen === "admin" && session?.type === "admin" && (
+            <AdminPanel
+              config={config} players={players} now={now}
+              onSaveConfig={saveConfig} onSavePlayer={savePlayer}
+              onLeaderboard={() => setScreen("leaderboard")}
+              onRefresh={loadAll}
+            />
+          )}
+        </Shell>
+      );
+    }
+
+    /* ============================================================
+       Layout
+       ============================================================ */
+    function Shell({ children }) {
+      return (
+        <div style={{
+          minHeight: "100%", background: `linear-gradient(160deg, ${C.navy}, ${C.navy2})`,
+          fontFamily: FONT, color: C.white,
+        }}>
+          <div style={{ maxWidth: 480, margin: "0 auto", padding: "16px 14px 60px" }}>
+            {children}
+          </div>
+        </div>
+      );
+    }
+
+    function TrialBanner() {
+      return (
+        <div style={{
+          background: C.red, color: "#fff", textAlign: "center", fontWeight: 800,
+          letterSpacing: 1, padding: "8px 10px", borderRadius: 10, marginBottom: 12,
+          border: `2px dashed ${C.gold}`,
+        }}>
+          ⚠ TRIAL MODE — TEST DATA ONLY ⚠
+        </div>
+      );
+    }
+
+    function Toast({ msg }) {
+      if (!msg) return null;
+      return (
+        <div style={{
+          position: "sticky", top: 6, zIndex: 50, marginBottom: 10,
+          background: C.green, color: "#06270f", fontWeight: 800, textAlign: "center",
+          padding: "11px 12px", borderRadius: 10, boxShadow: "0 6px 18px rgba(0,0,0,0.45)",
+        }}>{msg}</div>
+      );
+    }
+
+    function Header({ session, currentPlayer, config, onLogout, onHome }) {
+      return (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+          <div onClick={onHome} style={{ cursor: "pointer" }}>
+            <div style={{ fontSize: 20, fontWeight: 900, color: C.white, lineHeight: 1 }}>
+              WORLD CUP <span style={{ color: C.gold }}>2026</span>
+            </div>
+            <div style={{ fontSize: 11, color: C.muted, letterSpacing: 1 }}>PREDICTION GAME · USA · CAN · MEX</div>
+          </div>
+          {session && (
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontSize: 12, color: C.muted }}>
+                {session.type === "admin" ? "ADMIN" : session.name}
+              </div>
+              <button onClick={onLogout} style={{
+                background: "none", border: "none", color: C.red, fontWeight: 700,
+                cursor: "pointer", fontSize: 12, padding: 0, fontFamily: FONT,
+              }}>Log out</button>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    /* ============================================================
+       Login
+       ============================================================ */
+    function LoginScreen({ nameInput, setNameInput, pinInput, setPinInput, onPlayer, onAdmin, err }) {
+      const [tab, setTab] = useState("player");
+      return (
+        <div>
+          <Card style={{ textAlign: "center", background: C.panel2 }}>
+            <div style={{ fontSize: 40 }}>🏆</div>
+            <h2 style={{ margin: "6px 0 4px" }}>Welcome</h2>
+            <p style={{ color: C.muted, margin: 0, fontSize: 13 }}>
+              Predict your way through all 104 matches.
+            </p>
+          </Card>
+
+          <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+            <Btn variant={tab === "player" ? "gold" : "dark"} onClick={() => setTab("player")} style={{ flex: 1 }}>Player</Btn>
+            <Btn variant={tab === "admin" ? "gold" : "dark"} onClick={() => setTab("admin")} style={{ flex: 1 }}>Admin</Btn>
+          </div>
+
+          {tab === "player" ? (
+            <Card>
+              <label style={{ fontSize: 13, color: C.muted }}>Your name</label>
+              <input
+                value={nameInput}
+                onChange={(e) => setNameInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && onPlayer()}
+                placeholder="e.g. Ryan"
+                style={inputStyle}
+              />
+              <p style={{ fontSize: 12, color: C.muted, marginTop: 8 }}>
+                No password needed. Returning players: type the same name to pick up where you left off.
+              </p>
+              <Btn onClick={onPlayer} style={{ width: "100%", marginTop: 6 }}>Enter</Btn>
+            </Card>
+          ) : (
+            <Card>
+              <label style={{ fontSize: 13, color: C.muted }}>Admin PIN</label>
+              <input
+                value={pinInput} type="password"
+                onChange={(e) => setPinInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && onAdmin()}
+                placeholder="••••"
+                style={inputStyle}
+              />
+              <Btn onClick={onAdmin} style={{ width: "100%", marginTop: 10 }}>Enter admin panel</Btn>
+            </Card>
+          )}
+          {err && <p style={{ color: C.red, fontWeight: 700, fontSize: 13 }}>{err}</p>}
+        </div>
+      );
+    }
+
+    const inputStyle = {
+      width: "100%", padding: "12px 12px", marginTop: 6, borderRadius: 10,
+      border: `1px solid ${C.line}`, background: C.navy, color: C.white,
+      fontSize: 16, fontFamily: FONT, boxSizing: "border-box",
+    };
+
+    /* ============================================================
+       Player Home
+       ============================================================ */
+    function PlayerHome({ player, players, config, now, onOpenStage, onLeaderboard, onPredictions, onRefresh }) {
+      const sc = scorePlayer(player, config);
+      // next upcoming deadline (live only)
+      let nextDeadline = null;
+      if (!IS_TRIAL) {
+        for (const st of ALL_STAGES) {
+          const t = new Date(DEADLINES[st]).getTime();
+          if (t > now) { nextDeadline = { stage: st, iso: DEADLINES[st] }; break; }
+        }
+      }
+
+      return (
+        <div>
+          <Card style={{ background: `linear-gradient(135deg, ${C.red}, #b21e2c)`, border: "none", textAlign: "center" }}>
+            <div style={{ fontSize: 13, opacity: 0.9, letterSpacing: 1 }}>YOUR TOTAL SCORE</div>
+            <div style={{ fontSize: 52, fontWeight: 900, color: C.gold, lineHeight: 1 }}>{sc.total}</div>
+            <div style={{ fontSize: 12, opacity: 0.9 }}>points</div>
+          </Card>
+
+          {nextDeadline && (
+            <Card style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <div style={{ fontSize: 12, color: C.muted }}>Next deadline · {STAGE_LABELS[nextDeadline.stage]}</div>
+                <div style={{ fontSize: 12, color: C.muted }}>{fmtSGT(nextDeadline.iso)}</div>
+              </div>
+              <Countdown iso={nextDeadline.iso} />
+            </Card>
+          )}
+          {IS_TRIAL && (
+            <Card style={{ textAlign: "center", color: C.muted, fontSize: 13 }}>
+              Stages advance manually via the admin panel in trial mode.
+            </Card>
+          )}
+
+          <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+            <Btn variant="gold" onClick={onLeaderboard} style={{ flex: 1 }}>🏅 Leaderboard</Btn>
+            <Btn variant="dark" onClick={onPredictions} style={{ flex: 1 }}>👥 Predictions</Btn>
+          </div>
+          <div style={{ marginBottom: 14 }}>
+            <Btn variant="ghost" onClick={onRefresh} style={{ width: "100%" }}>↻ Refresh</Btn>
+          </div>
+
+          <div style={{ fontSize: 13, color: C.muted, margin: "4px 2px 8px", letterSpacing: 1 }}>YOUR PREDICTIONS</div>
+          {ALL_STAGES.map((st) => {
+            const open = isOpen(st, config, now);
+            const locked = isLocked(st, config, now);
+            const pts = sc.byStage[st];
+            const scored = config.resultsEntered[st];
+            const pendingBracket = PREREQ[st] && !config.confirmed[st] && isLocked(PREREQ[st], config, now) && !locked;
+            return (
+              <div key={st} onClick={() => (open || locked) && onOpenStage(st)}
+                style={{
+                  display: "flex", alignItems: "center", justifyContent: "space-between",
+                  background: C.panel, border: `1px solid ${open ? C.gold : C.line}`,
+                  borderRadius: 12, padding: "13px 14px", marginBottom: 8,
+                  cursor: open || locked ? "pointer" : "default", opacity: open || locked ? 1 : 0.55,
+                }}>
+                <div>
+                  <div style={{ fontWeight: 700 }}>{STAGE_LABELS[st]}</div>
+                  <div style={{ fontSize: 11, color: C.muted }}>
+                    {open ? "Open — tap to predict"
+                      : pendingBracket ? "Next round bracket coming soon"
+                      : locked ? "Locked" : "Upcoming"}
+                  </div>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  {scored && <Badge bg={C.gold}>{pts} pts</Badge>}
+                  {!scored && open && <Badge bg={C.green} color="#06270f">OPEN</Badge>}
+                  {!scored && locked && <Badge bg={C.panel2} color={C.muted}>LOCKED</Badge>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      );
+    }
+
+    /* ============================================================
+       Champion Pick
+       ============================================================ */
+    function ChampionPick({ player, players, config, now, onSave, onBack }) {
+      const open = isOpen("pre", config, now);
+      const locked = isLocked("pre", config, now);
+      const [pick, setPick] = useState(player.pre);
+      const [msg, setMsg] = useState("");
+
+      const sorted = [...TEAMS].sort((a, b) => a.name.localeCompare(b.name));
+
+      async function save() {
+        await onSave({ ...player, pre: pick });
+        setMsg("Saved!");
+        setTimeout(() => setMsg(""), 1500);
+      }
+
+      return (
+        <div>
+          <StageHeader title="Champion Pick" stage="pre" config={config} now={now} onBack={onBack} />
+          <Card>
+            <p style={{ marginTop: 0, fontSize: 13, color: C.muted }}>
+              Pick the one team you think will win the World Cup.
+              <b style={{ color: C.gold }}> 25 pts</b> if a previous winner takes the title,
+              <b style={{ color: C.gold }}> 75 pts</b> if an underdog does.
+            </p>
+          </Card>
+
+          {locked && <LockedNote />}
+
+          <div>
+            {sorted.map((t) => {
+              const prev = isPreviousWinner(t.name);
+              const selected = pick === t.name;
+              return (
+                <div key={t.name}
+                  onClick={() => open && setPick(t.name)}
+                  style={{
+                    display: "flex", justifyContent: "space-between", alignItems: "center",
+                    background: selected ? C.panel2 : C.panel,
+                    border: `1px solid ${selected ? C.gold : C.line}`,
+                    borderRadius: 10, padding: "11px 13px", marginBottom: 7,
+                    cursor: open ? "pointer" : "default",
+                  }}>
+                  <div style={{ fontWeight: selected ? 800 : 600 }}>
+                    {selected ? "★ " : ""}{t.name}
+                  </div>
+                  <Badge bg={prev ? C.gold : C.panel2} color={prev ? C.navy : C.muted}>
+                    {prev ? "Previous Winner" : "Underdog"}
+                  </Badge>
+                </div>
+              );
+            })}
+          </div>
+
+          {open && (
+            <div style={{ position: "sticky", bottom: 8, marginTop: 12 }}>
+              <Btn onClick={save} disabled={!pick} style={{ width: "100%" }}>
+                {msg || (pick ? `Lock in ${pick}` : "Select a team")}
+              </Btn>
+            </div>
+          )}
+          {locked && <OthersPicks players={players} render={(p) => p.pre || "—"} label="Champion picks" />}
+        </div>
+      );
+    }
+
+    /* ============================================================
+       Group Stage — pick exactly 32
+       ============================================================ */
+    function GroupStage({ player, players, config, now, onSave, onBack }) {
+      const open = isOpen("group", config, now);
+      const locked = isLocked("group", config, now);
+      const [picks, setPicks] = useState(new Set(player.group || []));
+      const [msg, setMsg] = useState("");
+
+      const sorted = [...TEAMS].sort((a, b) => a.tier - b.tier || a.name.localeCompare(b.name));
+
+      function toggle(name) {
+        if (!open) return;
+        const next = new Set(picks);
+        if (next.has(name)) next.delete(name);
+        else next.add(name);
+        setPicks(next);
+      }
+
+      async function save() {
+        if (picks.size !== 32) {
+          setMsg(`You have ${picks.size} selected — you must pick exactly 32.`);
+          return;
+        }
+        await onSave({ ...player, group: [...picks] });
+        setMsg("Saved!");
+        setTimeout(() => setMsg(""), 1500);
+      }
+
+      const q = config.resultsEntered.group && config.groupQualifiers
+        ? new Set(config.groupQualifiers) : null;
+
+      let currentTier = 0;
+      return (
+        <div>
+          <StageHeader title="Group Stage" stage="group" config={config} now={now} onBack={onBack} />
+          <Card>
+            <p style={{ marginTop: 0, fontSize: 13, color: C.muted }}>
+              Select exactly <b style={{ color: C.gold }}>32 teams</b> you think will reach the Round of 32.
+              Lower-ranked teams score more: Tier 1 = 1pt, Tier 2 = 2pts, Tier 3 = 3pts per correct pick.
+            </p>
+          </Card>
+
+          {locked && <LockedNote />}
+
+          <div style={{
+            position: "sticky", top: 0, zIndex: 5, background: C.navy,
+            padding: "8px 0", marginBottom: 6,
+          }}>
+            <Badge bg={picks.size === 32 ? C.green : C.red} color="#fff">
+              {picks.size} / 32 selected
+            </Badge>
+          </div>
+
+          {sorted.map((t) => {
+            const showTier = t.tier !== currentTier;
+            currentTier = t.tier;
+            const selected = picks.has(t.name);
+            const correct = q && selected && q.has(t.name);
+            const wrong = q && selected && !q.has(t.name);
+            return (
+              <div key={t.name}>
+                {showTier && (
+                  <div style={{ fontSize: 12, color: C.gold, fontWeight: 800, margin: "10px 2px 6px", letterSpacing: 1 }}>
+                    TIER {t.tier} · {TIER_POINTS[t.tier]} pt{TIER_POINTS[t.tier] > 1 ? "s" : ""} each
+                  </div>
+                )}
+                <div onClick={() => toggle(t.name)}
+                  style={{
+                    display: "flex", justifyContent: "space-between", alignItems: "center",
+                    background: selected ? C.panel2 : C.panel,
+                    border: `1px solid ${correct ? C.green : wrong ? C.red : selected ? C.gold : C.line}`,
+                    borderRadius: 10, padding: "10px 13px", marginBottom: 6,
+                    cursor: open ? "pointer" : "default",
+                  }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{
+                      width: 20, height: 20, borderRadius: 5, border: `1px solid ${C.line}`,
+                      display: "inline-flex", alignItems: "center", justifyContent: "center",
+                      background: selected ? C.gold : "transparent", color: C.navy, fontWeight: 900, fontSize: 13,
+                    }}>{selected ? "✓" : ""}</span>
+                    <span style={{ fontWeight: selected ? 700 : 500 }}>{t.name}</span>
+                  </div>
+                  <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                    <span style={{ fontSize: 11, color: C.muted }}>#{t.rank}</span>
+                    <Badge bg={C.panel2} color={C.muted}>{TIER_POINTS[t.tier]}pt</Badge>
+                    {correct && <Badge bg={C.green} color="#fff">✓</Badge>}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+
+          {open && (
+            <div style={{ position: "sticky", bottom: 8, marginTop: 12 }}>
+              <Btn onClick={save} style={{ width: "100%" }}
+                variant={picks.size === 32 ? "primary" : "dark"}>
+                {msg || (picks.size === 32 ? "Lock in 32 teams" : `Select ${32 - picks.size > 0 ? 32 - picks.size + " more" : (picks.size - 32) + " too many"}`)}
+              </Btn>
+            </div>
+          )}
+          {msg && !open && <p style={{ color: C.red }}>{msg}</p>}
+
+          {locked && (
+            <OthersPicks players={players}
+              render={(p) => (p.group || []).length + " teams"}
+              label="Group picks (count)" />
+          )}
+        </div>
+      );
+    }
+
+    /* ============================================================
+       Knockout Stage — pick winners
+       ============================================================ */
+    function KnockoutStage({ round, player, players, config, now, onSave, onBack }) {
+      const open = isOpen(round, config, now);
+      const locked = isLocked(round, config, now);
+      const fixtures = config.fixtures[round] || [];
+      const confirmed = config.confirmed[round];
+      const prereqDone = !PREREQ[round] || isLocked(PREREQ[round], config, now);
+
+      const [picks, setPicks] = useState({ ...(player[round] || {}) });
+      const [msg, setMsg] = useState("");
+
+      function choose(matchId, team) {
+        if (!open) return;
+        setPicks((p) => ({ ...p, [matchId]: team }));
+      }
+      async function save() {
+        await onSave({ ...player, [round]: picks });
+        setMsg("Saved!");
+        setTimeout(() => setMsg(""), 1500);
+      }
+
+      // bracket not ready
+      if (!confirmed || fixtures.length === 0) {
+        return (
+          <div>
+            <StageHeader title={STAGE_LABELS[round]} stage={round} config={config} now={now} onBack={onBack} />
+            <Card style={{ textAlign: "center", color: C.muted }}>
+              {!prereqDone ? "This round opens once the previous round is complete."
+                : "Next round bracket coming soon — the admin is still confirming the fixtures."}
+            </Card>
+          </div>
+        );
+      }
+
+      return (
+        <div>
+          <StageHeader title={STAGE_LABELS[round]} stage={round} config={config} now={now} onBack={onBack} />
+          <Card>
+            <p style={{ marginTop: 0, fontSize: 13, color: C.muted }}>
+              Pick the winner of each match. <b style={{ color: C.gold }}>{KNOCKOUT_POINTS[round]} pts</b> per correct winner.
+            </p>
+          </Card>
+          {locked && <LockedNote />}
+
+          {fixtures.map((m, i) => {
+            const pick = picks[m.id];
+            const resultIn = config.resultsEntered[round] && m.winner;
+            return (
+              <Card key={m.id} style={{ padding: 12 }}>
+                <div style={{ fontSize: 11, color: C.muted, marginBottom: 8 }}>Match {i + 1}</div>
+                {[m.teamA, m.teamB].map((team) => {
+                  const sel = pick === team;
+                  const isWinner = resultIn && m.winner === team;
+                  const pickedRight = resultIn && sel && m.winner === team;
+                  const pickedWrong = resultIn && sel && m.winner !== team;
+                  return (
+                    <div key={team} onClick={() => choose(m.id, team)}
+                      style={{
+                        display: "flex", justifyContent: "space-between", alignItems: "center",
+                        padding: "11px 12px", borderRadius: 9, marginBottom: 6,
+                        background: sel ? C.panel2 : C.navy,
+                        border: `1px solid ${pickedRight ? C.green : pickedWrong ? C.red : sel ? C.gold : C.line}`,
+                        cursor: open ? "pointer" : "default",
+                      }}>
+                      <span style={{ fontWeight: sel ? 800 : 600 }}>
+                        {sel ? "✓ " : ""}{team}
+                      </span>
+                      <span style={{ display: "flex", gap: 6 }}>
+                        {isWinner && <Badge bg={C.green} color="#fff">WON</Badge>}
+                      </span>
+                    </div>
+                  );
+                })}
+              </Card>
+            );
+          })}
+
+          {open && (
+            <div style={{ position: "sticky", bottom: 8, marginTop: 12 }}>
+              <Btn onClick={save} style={{ width: "100%" }}>
+                {msg || `Save picks (${Object.keys(picks).length}/${fixtures.length})`}
+              </Btn>
+            </div>
+          )}
+
+          {locked && (
+            <OthersPicks players={players}
+              render={(p) => {
+                const obj = p[round] || {};
+                const n = Object.keys(obj).length;
+                return n + " picks";
+              }}
+              label={STAGE_LABELS[round] + " picks (count)"} />
+          )}
+        </div>
+      );
+    }
+
+    function StageHeader({ title, stage, config, now, onBack }) {
+      return (
+        <div style={{ marginBottom: 12 }}>
+          <button onClick={onBack} style={{
+            background: "none", border: "none", color: C.gold, fontWeight: 700,
+            cursor: "pointer", padding: 0, fontSize: 14, fontFamily: FONT,
+          }}>‹ Back</button>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 6 }}>
+            <h2 style={{ margin: 0 }}>{title}</h2>
+            {config.unlocked && config.unlocked[stage] ? (
+              <div style={{ textAlign: "right", fontSize: 12 }}>
+                <div style={{ color: C.gold, fontWeight: 700 }}>⏱ Reopened by admin</div>
+                <div style={{ color: C.muted }}>Last-minute edits allowed</div>
+              </div>
+            ) : !IS_TRIAL && !isLocked(stage, config, now) ? (
+              <div style={{ textAlign: "right", fontSize: 12 }}>
+                <div style={{ color: C.muted }}>Locks in</div>
+                <Countdown iso={DEADLINES[stage]} />
+              </div>
+            ) : null}
+          </div>
+          {!IS_TRIAL && <div style={{ fontSize: 11, color: C.muted }}>Deadline: {fmtSGT(DEADLINES[stage])}</div>}
+        </div>
+      );
+    }
+
+    function LockedNote() {
+      return (
+        <Card style={{ background: C.panel2, borderColor: C.red }}>
+          <div style={{ color: C.red, fontWeight: 700, fontSize: 13 }}>🔒 This stage is locked</div>
+          <div style={{ color: C.muted, fontSize: 12 }}>Your picks are final and now visible to everyone.</div>
+        </Card>
+      );
+    }
+
+    function OthersPicks({ players, render, label }) {
+      return (
+        <Card style={{ marginTop: 12 }}>
+          <div style={{ fontSize: 13, color: C.gold, fontWeight: 800, marginBottom: 8 }}>{label} — everyone</div>
+          {players.length === 0 && <div style={{ color: C.muted, fontSize: 13 }}>No players yet.</div>}
+          {players.map((p) => (
+            <div key={p.key} style={{
+              display: "flex", justifyContent: "space-between", padding: "6px 0",
+              borderBottom: `1px solid ${C.line}`, fontSize: 13,
+            }}>
+              <span>{p.name}</span>
+              <span style={{ color: C.muted }}>{render(p)}</span>
+            </div>
+          ))}
+        </Card>
+      );
+    }
+
+    /* ============================================================
+       Leaderboard
+       ============================================================ */
+    // Recent-stage points cell. When the latest scored stage is the Final and the
+    // player also earned pre-tournament champion points, show "final + pre" (e.g. 25 + 25)
+    // so the end-of-tournament jump is transparent.
+    function RecentCell({ score }) {
+      if (score.recentStage === "final" && score.byStage.pre > 0) {
+        return (
+          <span>
+            {score.byStage.final}
+            <span style={{ color: C.gold, fontWeight: 800 }}> + {score.byStage.pre}</span>
+          </span>
+        );
+      }
+      return <span>{score.recentPoints}</span>;
+    }
+
+    function Leaderboard({ players, config, now, onBack, onRefresh }) {
+      const ranked = rankPlayers(players, config);
+      let recentStage = null;
+      for (const st of ALL_STAGES) if (config.resultsEntered[st]) recentStage = st;
+
+      return (
+        <div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+            <button onClick={onBack} style={{
+              background: "none", border: "none", color: C.gold, fontWeight: 700,
+              cursor: "pointer", padding: 0, fontSize: 14, fontFamily: FONT,
+            }}>‹ Back</button>
+            <Btn variant="ghost" onClick={onRefresh} style={{ padding: "6px 12px" }}>↻</Btn>
+          </div>
+          <h2 style={{ marginTop: 0 }}>🏅 Leaderboard</h2>
+          <div style={{ fontSize: 12, color: C.muted, marginBottom: 10 }}>
+            Most recent stage: {recentStage ? STAGE_LABELS[recentStage] : "none yet"}
+          </div>
+
+          <div style={{
+            display: "grid", gridTemplateColumns: "32px 1fr auto auto", gap: 4,
+            fontSize: 11, color: C.muted, fontWeight: 700, padding: "0 6px 6px",
+          }}>
+            <div>#</div><div>Player</div>
+            <div style={{ textAlign: "right" }}>Recent</div>
+            <div style={{ textAlign: "right", paddingLeft: 10 }}>Total</div>
+          </div>
+
+          {ranked.length === 0 && <Card style={{ color: C.muted }}>No players registered yet.</Card>}
+
+          {ranked.map(({ player, score, rank, shared }) => (
+            <div key={player.key} style={{
+              display: "grid", gridTemplateColumns: "32px 1fr auto auto", gap: 4, alignItems: "center",
+              background: rank === 1 ? "linear-gradient(90deg, #2a2410, " + C.panel + ")" : C.panel,
+              border: `1px solid ${rank === 1 ? C.gold : C.line}`,
+              borderRadius: 10, padding: "11px 6px", marginBottom: 7,
+            }}>
+              <div style={{ fontWeight: 900, color: rank === 1 ? C.gold : C.white, textAlign: "center" }}>{rank}</div>
+              <div style={{ fontWeight: 700 }}>
+                {player.name}{shared && <span style={{ color: C.muted, fontSize: 11 }}> (tied)</span>}
+              </div>
+              <div style={{ textAlign: "right", color: C.muted, fontVariantNumeric: "tabular-nums" }}>
+                <RecentCell score={score} />
+              </div>
+              <div style={{ textAlign: "right", paddingLeft: 10, fontWeight: 900, color: C.gold }}>{score.total}</div>
+            </div>
+          ))}
+
+          <Card style={{ marginTop: 8, fontSize: 11, color: C.muted }}>
+            Recent shows points from the latest scored stage. After the Final, a value like
+            <span style={{ color: C.white }}> 25 </span>
+            <span style={{ color: C.gold }}>+ 25</span> means Final-match points plus your pre-tournament
+            champion bonus (the gold figure), which both land at the end.
+          </Card>
+
+          <Card style={{ marginTop: 8, fontSize: 11, color: C.muted }}>
+            Ties are broken by: (1) correct champion, (2) both finalists, (3) most semi-finalists,
+            (4) most quarter-finalists, then shared.
+          </Card>
+        </div>
+      );
+    }
+
+    /* ============================================================
+       All Predictions (visible per stage only after that deadline)
+       ============================================================ */
+    function AllPredictions({ players, config, now, onBack, onRefresh }) {
+      // A stage's picks become visible to everyone once its deadline has passed
+      // (the stage is locked). They re-render with correct/incorrect tints once
+      // results are entered. Results imply the deadline has passed, so allow either.
+      const revealed = (st) => isLocked(st, config, now) || config.resultsEntered[st];
+      const openStages = ALL_STAGES.filter((st) => revealed(st));
+      const [stage, setStage] = useState(
+        openStages.length ? openStages[openStages.length - 1] : "pre"
+      );
+      const stVisible = revealed(stage);
+
+      function renderPicks(p) {
+        if (stage === "pre") {
+          return <span style={{ fontWeight: 700 }}>{p.pre || <span style={{ color: C.muted, fontWeight: 400 }}>No pick</span>}</span>;
+        }
+        if (stage === "group") {
+          const g = [...(p.group || [])].sort();
+          if (g.length === 0) return <span style={{ color: C.muted }}>No picks</span>;
+          const q = config.resultsEntered.group && config.groupQualifiers ? new Set(config.groupQualifiers) : null;
+          return (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+              {g.map((t) => (
+                <span key={t} style={{
+                  fontSize: 11, padding: "2px 6px", borderRadius: 6,
+                  background: q && q.has(t) ? C.green : C.panel2,
+                  color: q && q.has(t) ? "#fff" : C.muted,
+                }}>{t}</span>
+              ))}
+            </div>
+          );
+        }
+        const fx = config.fixtures[stage] || [];
+        const picks = p[stage] || {};
+        if (fx.length === 0) return <span style={{ color: C.muted }}>—</span>;
+        return (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+            {fx.map((m) => {
+              const pick = picks[m.id];
+              const correct = config.resultsEntered[stage] && m.winner && pick === m.winner;
+              const wrong = config.resultsEntered[stage] && m.winner && pick && pick !== m.winner;
+              return (
+                <span key={m.id} style={{
+                  fontSize: 11, padding: "2px 6px", borderRadius: 6,
+                  background: correct ? C.green : C.panel2,
+                  color: correct ? "#fff" : wrong ? C.red : C.muted,
+                }}>{pick || "—"}</span>
+              );
+            })}
+          </div>
+        );
+      }
+
+      return (
+        <div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+            <button onClick={onBack} style={{
+              background: "none", border: "none", color: C.gold, fontWeight: 700,
+              cursor: "pointer", padding: 0, fontSize: 14, fontFamily: FONT,
+            }}>‹ Back</button>
+            <Btn variant="ghost" onClick={onRefresh} style={{ padding: "6px 12px" }}>↻</Btn>
+          </div>
+          <h2 style={{ marginTop: 0 }}>👥 Everyone's Predictions</h2>
+          <div style={{ fontSize: 12, color: C.muted, marginBottom: 12 }}>
+            Each stage's picks unlock for everyone once that stage's deadline has passed.
+          </div>
+
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
+            {ALL_STAGES.map((st) => {
+              const lk = revealed(st);
+              return (
+                <Btn key={st} variant={stage === st ? "gold" : "dark"} disabled={!lk}
+                  onClick={() => setStage(st)} style={{ padding: "6px 10px", fontSize: 12 }}>
+                  {lk ? "" : "🔒 "}{STAGE_LABELS[st]}
+                </Btn>
+              );
+            })}
+          </div>
+
+          {!stVisible ? (
+            <Card style={{ textAlign: "center", color: C.muted }}>
+              🔒 Hidden until the {STAGE_LABELS[stage]} deadline passes.
+            </Card>
+          ) : players.length === 0 ? (
+            <Card style={{ color: C.muted }}>No players yet.</Card>
+          ) : (
+            <>
+              <div style={{ fontSize: 12, marginBottom: 8, color: config.resultsEntered[stage] ? C.green : C.muted }}>
+                {config.resultsEntered[stage]
+                  ? "Results are in — correct picks are highlighted in green."
+                  : "Deadline passed. Results not entered yet, so picks are shown without scoring."}
+              </div>
+              {players.map((p) => (
+                <Card key={p.key} style={{ padding: 12 }}>
+                  <div style={{ fontWeight: 800, marginBottom: 6 }}>{p.name}</div>
+                  {renderPicks(p)}
+                </Card>
+              ))}
+            </>
+          )}
+        </div>
+      );
+    }
+
+    /* ============================================================
+       ADMIN PANEL
+       ============================================================ */
+    function AdminPanel({ config, players, now, onSaveConfig, onSavePlayer, onLeaderboard, onRefresh }) {
+      const [tab, setTab] = useState("stages");
+
+      return (
+        <div>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
+            <h2 style={{ margin: 0 }}>⚙ Admin</h2>
+            <Btn variant="ghost" onClick={onRefresh} style={{ padding: "6px 12px" }}>↻</Btn>
+          </div>
+
+          {IS_TRIAL && <TrialAdvance config={config} onSaveConfig={onSaveConfig} now={now} />}
+
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
+            {[
+              ["stages", "Stages"], ["results", "Results"], ["bracket", "Bracket"],
+              ["submissions", "Check"], ["override", "Override"], ["players", "Players"],
+              ["board", "Leaderboard"], ["danger", "Reset"],
+            ].map(([k, label]) => (
+              <Btn key={k} variant={tab === k ? "gold" : "dark"} onClick={() => k === "board" ? onLeaderboard() : setTab(k)}
+                style={{ padding: "7px 11px", fontSize: 12 }}>{label}</Btn>
+            ))}
+          </div>
+
+          {tab === "stages" && <AdminStages config={config} now={now} onSaveConfig={onSaveConfig} />}
+          {tab === "results" && <AdminResults config={config} now={now} onSaveConfig={onSaveConfig} />}
+          {tab === "bracket" && <AdminBracket config={config} onSaveConfig={onSaveConfig} />}
+          {tab === "submissions" && <AdminSubmissions players={players} config={config} now={now} />}
+          {tab === "override" && <AdminOverride config={config} players={players} onSaveConfig={onSaveConfig} />}
+          {tab === "players" && <AdminPlayers players={players} config={config} />}
+          {tab === "danger" && <AdminDanger players={players} onSaveConfig={onSaveConfig} />}
+        </div>
+      );
+    }
+
+    function TrialAdvance({ config, onSaveConfig, now }) {
+      const idx = TRIAL_SEQ.indexOf(config.trialStage);
+      const next = idx < TRIAL_SEQ.length - 1 ? TRIAL_SEQ[idx + 1] : null;
+      const done = config.trialStage === "done";
+
+      const curLabel = done
+        ? "All predictions locked"
+        : config.trialStage === "pre"
+          ? "Pre-tournament (Champion + Group)"
+          : STAGE_LABELS[config.trialStage];
+      const lockLabel = config.trialStage === "pre" ? "pre-tournament" : STAGE_LABELS[config.trialStage];
+      const opensNext = next && next !== "done" ? (next === "pre" ? "Pre-tournament" : STAGE_LABELS[next]) : null;
+
+      return (
+        <Card style={{ borderColor: C.gold }}>
+          <div style={{ fontSize: 12, color: C.muted }}>
+            TRIAL · {done ? "tournament status" : "predictions currently open"}
+          </div>
+          <div style={{ fontWeight: 800, color: C.gold, marginBottom: 8 }}>{curLabel}</div>
+          <Btn variant="gold" disabled={!next}
+            onClick={() => onSaveConfig({ ...config, trialStage: next })}>
+            {done ? "Tournament complete — all locked" : `🔒 Lock ${lockLabel} predictions`}
+          </Btn>
+          {!done && (
+            <div style={{ fontSize: 11, color: C.muted, marginTop: 8 }}>
+              {opensNext
+                ? `Locks the current picks and reveals them to everyone, then opens ${opensNext}.`
+                : "Locks the Final picks and reveals them to everyone. This is the last stage."}
+            </div>
+          )}
+        </Card>
+      );
+    }
+
+    function AdminStages({ config, now, onSaveConfig }) {
+      function setUnlock(st, val) {
+        const unlocked = { ...(config.unlocked || {}) };
+        if (val) unlocked[st] = true;
+        else delete unlocked[st];
+        onSaveConfig({ ...config, unlocked });
+      }
+      return (
+        <div>
+          <Card style={{ fontSize: 12, color: C.muted }}>
+            Unlock reopens a stage that has already locked, so players can make last-minute changes.
+            While reopened, that stage's picks are hidden from other players again until you re-lock it.
+          </Card>
+          {ALL_STAGES.map((st) => {
+            const s = stageStatus(st, config, now);
+            const reopened = config.unlocked && config.unlocked[st];
+            const naturallyLocked = isLockedBase(st, config, now);
+            return (
+              <div key={st} style={{
+                background: C.panel, border: `1px solid ${reopened ? C.gold : C.line}`, borderRadius: 10,
+                padding: "12px 14px", marginBottom: 7,
+              }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div>
+                    <div style={{ fontWeight: 700 }}>{STAGE_LABELS[st]}</div>
+                    {!IS_TRIAL && <div style={{ fontSize: 11, color: C.muted }}>{fmtSGT(DEADLINES[st])}</div>}
+                  </div>
+                  <Badge bg={C.panel2} color={s.color}>{s.label}</Badge>
+                </div>
+                {reopened ? (
+                  <Btn variant="primary" onClick={() => setUnlock(st, false)} style={{ width: "100%", marginTop: 10, padding: "8px" }}>
+                    🔒 Re-lock {STAGE_LABELS[st]} now
+                  </Btn>
+                ) : naturallyLocked ? (
+                  <Btn variant="dark" onClick={() => setUnlock(st, true)} style={{ width: "100%", marginTop: 10, padding: "8px" }}>
+                    🔓 Unlock for last-minute edits
+                  </Btn>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
+      );
+    }
+
+    /* ---------- Submission check ---------- */
+    function AdminSubmissions({ players, config, now }) {
+      const abbr = { pre: "Pre", group: "Grp", r32: "R32", r16: "R16", qf: "QF", sf: "SF", third: "3rd", final: "Fin" };
+      const openStages = ALL_STAGES.filter((st) => isOpen(st, config, now));
+      return (
+        <div>
+          <Card>
+            <div style={{ fontWeight: 800, marginBottom: 6 }}>Submission tracker</div>
+            <div style={{ fontSize: 12, color: C.muted, marginBottom: 10 }}>
+              ✓ means the player has fully completed that stage's predictions (champion chosen, exactly 32 group teams, or every match in a confirmed knockout round picked).
+            </div>
+            {players.length === 0 ? (
+              <div style={{ color: C.muted, fontSize: 13 }}>No players registered yet.</div>
+            ) : (
+              <div style={{ overflowX: "auto" }}>
+                <div style={{
+                  display: "grid", gridTemplateColumns: `92px repeat(${ALL_STAGES.length}, 1fr)`,
+                  gap: 3, minWidth: 372, alignItems: "center",
+                }}>
+                  <div style={{ fontSize: 11, color: C.muted, fontWeight: 700 }}>Player</div>
+                  {ALL_STAGES.map((st) => (
+                    <div key={st} style={{ fontSize: 10, color: C.muted, fontWeight: 700, textAlign: "center" }}>{abbr[st]}</div>
+                  ))}
+                  {players.map((p) => (
+                    <Fragment key={p.key}>
+                      <div style={{ fontSize: 12, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.name}</div>
+                      {ALL_STAGES.map((st) => {
+                        const done = stageComplete(p, st, config);
+                        return (
+                          <div key={st} style={{ textAlign: "center", color: done ? C.green : C.line, fontWeight: 900 }}>
+                            {done ? "✓" : "·"}
+                          </div>
+                        );
+                      })}
+                    </Fragment>
+                  ))}
+                </div>
+              </div>
+            )}
+          </Card>
+
+          {openStages.length === 0 && (
+            <Card style={{ color: C.muted, fontSize: 13 }}>No stage is currently open for predictions.</Card>
+          )}
+          {openStages.map((st) => {
+            const missing = players.filter((p) => !stageComplete(p, st, config));
+            return (
+              <Card key={st} style={{ borderColor: missing.length ? C.red : C.green }}>
+                <div style={{ fontWeight: 800 }}>{STAGE_LABELS[st]} — open now</div>
+                {players.length === 0 ? (
+                  <div style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>No players yet.</div>
+                ) : missing.length === 0 ? (
+                  <div style={{ color: C.green, fontSize: 13, marginTop: 4 }}>All {players.length} players have submitted ✓</div>
+                ) : (
+                  <div style={{ fontSize: 13, marginTop: 4 }}>
+                    <span style={{ color: C.red, fontWeight: 700 }}>{missing.length} of {players.length} not yet submitted: </span>
+                    <span style={{ color: C.muted }}>{missing.map((p) => p.name).join(", ")}</span>
+                  </div>
+                )}
+              </Card>
+            );
+          })}
+        </div>
+      );
+    }
+
+    /* ---------- Results entry ---------- */
+    function AdminResults({ config, now, onSaveConfig }) {
+      return (
+        <div>
+          <GroupResults config={config} onSaveConfig={onSaveConfig} />
+          {KNOCKOUT_ROUNDS.map((rd) => (
+            <KnockoutResults key={rd} round={rd} config={config} onSaveConfig={onSaveConfig} />
+          ))}
+        </div>
+      );
+    }
+
+    function GroupResults({ config, onSaveConfig }) {
+      const [sel, setSel] = useState(new Set(config.groupQualifiers || []));
+      const sorted = [...TEAMS].sort((a, b) => a.tier - b.tier || a.name.localeCompare(b.name));
+      function toggle(n) {
+        const next = new Set(sel);
+        next.has(n) ? next.delete(n) : next.add(n);
+        setSel(next);
+      }
+      function save() {
+        onSaveConfig({
+          ...config,
+          groupQualifiers: [...sel],
+          resultsEntered: { ...config.resultsEntered, group: true },
+        });
+      }
+      function loadMock() {
+        setSel(new Set(MOCK_QUALIFIERS));
+      }
+      return (
+        <Card>
+          <div style={{ fontWeight: 800, marginBottom: 6 }}>Group Stage — qualifying 32</div>
+          <div style={{ fontSize: 12, color: C.muted, marginBottom: 8 }}>
+            Select the 32 teams that advanced ({sel.size} selected).
+            {config.resultsEntered.group && <span style={{ color: C.green }}> ✓ entered</span>}
+          </div>
+          {IS_TRIAL && <Btn variant="ghost" onClick={loadMock} style={{ marginBottom: 8 }}>Load mock qualifiers</Btn>}
+          <div style={{ maxHeight: 220, overflowY: "auto", border: `1px solid ${C.line}`, borderRadius: 8, padding: 6 }}>
+            {sorted.map((t) => (
+              <label key={t.name} style={{ display: "flex", gap: 8, padding: "4px 4px", fontSize: 13, cursor: "pointer" }}>
+                <input type="checkbox" checked={sel.has(t.name)} onChange={() => toggle(t.name)} />
+                <span>{t.name}</span>
+                <span style={{ color: C.muted, marginLeft: "auto" }}>T{t.tier}</span>
+              </label>
+            ))}
+          </div>
+          <Btn onClick={save} disabled={sel.size !== 32} style={{ width: "100%", marginTop: 8 }}>
+            {sel.size === 32 ? "Save qualifiers & score group stage" : `Need exactly 32 (have ${sel.size})`}
+          </Btn>
+        </Card>
+      );
+    }
+
+    function KnockoutResults({ round, config, onSaveConfig }) {
+      const fixtures = config.fixtures[round] || [];
+      const [winners, setWinners] = useState(
+        Object.fromEntries(fixtures.map((m) => [m.id, m.winner || null]))
+      );
+
+      useEffect(() => {
+        setWinners(Object.fromEntries((config.fixtures[round] || []).map((m) => [m.id, m.winner || null])));
+      }, [config.fixtures[round]]);
+
+      if (fixtures.length === 0) {
+        return (
+          <Card>
+            <div style={{ fontWeight: 800 }}>{STAGE_LABELS[round]}</div>
+            <div style={{ fontSize: 12, color: C.muted }}>
+              No fixtures yet. Build/confirm this round's bracket first (Bracket tab).
+            </div>
+          </Card>
+        );
+      }
+
+      function pick(id, team) { setWinners((w) => ({ ...w, [id]: team })); }
+      function loadMock() {
+        const w = {};
+        fixtures.forEach((m) => { w[m.id] = betterTeam(m.teamA, m.teamB); });
+        setWinners(w);
+      }
+      function save() {
+        const newFixtures = fixtures.map((m) => ({ ...m, winner: winners[m.id] || null }));
+        onSaveConfig({
+          ...config,
+          fixtures: { ...config.fixtures, [round]: newFixtures },
+          resultsEntered: { ...config.resultsEntered, [round]: true },
+        });
+      }
+      const allPicked = fixtures.every((m) => winners[m.id]);
+
+      return (
+        <Card>
+          <div style={{ fontWeight: 800, marginBottom: 4 }}>
+            {STAGE_LABELS[round]} — winners
+            {config.resultsEntered[round] && <span style={{ color: C.green }}> ✓</span>}
+          </div>
+          {IS_TRIAL && <Btn variant="ghost" onClick={loadMock} style={{ marginBottom: 8 }}>Load mock winners</Btn>}
+          {fixtures.map((m, i) => (
+            <div key={m.id} style={{ marginBottom: 8 }}>
+              <div style={{ fontSize: 11, color: C.muted }}>Match {i + 1}</div>
+              <div style={{ display: "flex", gap: 6 }}>
+                {[m.teamA, m.teamB].map((team) => (
+                  <Btn key={team} variant={winners[m.id] === team ? "gold" : "dark"}
+                    onClick={() => pick(m.id, team)} style={{ flex: 1, fontSize: 13, padding: "9px" }}>
+                    {team}
+                  </Btn>
+                ))}
+              </div>
+            </div>
+          ))}
+          <Btn onClick={save} disabled={!allPicked} style={{ width: "100%", marginTop: 6 }}>
+            {allPicked ? "Save results & score round" : "Pick all winners first"}
+          </Btn>
+        </Card>
+      );
+    }
+
+    /* ---------- Bracket build / confirm ---------- */
+    function AdminBracket({ config, onSaveConfig }) {
+      return (
+        <div>
+          <R32Builder config={config} onSaveConfig={onSaveConfig} />
+          {["r16", "qf", "sf", "final", "third"].map((rd) => (
+            <BracketRound key={rd} round={rd} config={config} onSaveConfig={onSaveConfig} />
+          ))}
+        </div>
+      );
+    }
+
+    function R32Builder({ config, onSaveConfig }) {
+      const pool = config.groupQualifiers && config.groupQualifiers.length === 32
+        ? [...config.groupQualifiers].sort()
+        : TEAMS.map((t) => t.name);
+      const existing = config.fixtures.r32 || [];
+      const [matches, setMatches] = useState(
+        existing.length === 16
+          ? existing.map((m) => [m.teamA, m.teamB])
+          : Array.from({ length: 16 }, () => ["", ""])
+      );
+
+      function setSlot(i, side, val) {
+        setMatches((ms) => ms.map((m, idx) => (idx === i ? (side === 0 ? [val, m[1]] : [m[0], val]) : m)));
+      }
+      function autoFill() {
+        const list = config.groupQualifiers && config.groupQualifiers.length === 32
+          ? config.groupQualifiers : MOCK_QUALIFIERS;
+        const ms = [];
+        for (let i = 0; i < 16; i++) ms.push([list[i * 2], list[i * 2 + 1]]);
+        setMatches(ms);
+      }
+      function save(confirm) {
+        const fixtures = matches.map((m, i) => ({ id: "r32_" + i, teamA: m[0], teamB: m[1], winner: null }));
+        onSaveConfig({
+          ...config,
+          fixtures: { ...config.fixtures, r32: fixtures },
+          confirmed: { ...config.confirmed, r32: confirm ? true : config.confirmed.r32 },
+        });
+      }
+      const complete = matches.every((m) => m[0] && m[1]);
+
+      return (
+        <Card>
+          <div style={{ fontWeight: 800 }}>Round of 32 — build bracket
+            {config.confirmed.r32 && <span style={{ color: C.green }}> ✓ confirmed</span>}</div>
+          <div style={{ fontSize: 12, color: C.muted, margin: "4px 0 8px" }}>
+            Pair the 32 qualifiers into 16 matches, then confirm to make visible to players.
+          </div>
+          <Btn variant="ghost" onClick={autoFill} style={{ marginBottom: 8 }}>Auto-fill from qualifiers</Btn>
+          {matches.map((m, i) => (
+            <div key={i} style={{ display: "flex", gap: 5, marginBottom: 5, alignItems: "center" }}>
+              <span style={{ fontSize: 11, color: C.muted, width: 18 }}>{i + 1}</span>
+              {[0, 1].map((side) => (
+                <select key={side} value={m[side]} onChange={(e) => setSlot(i, side, e.target.value)}
+                  style={selStyle}>
+                  <option value="">—</option>
+                  {pool.map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
+              ))}
+            </div>
+          ))}
+          <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+            <Btn variant="dark" onClick={() => save(false)} style={{ flex: 1 }}>Save draft</Btn>
+            <Btn variant="primary" onClick={() => save(true)} disabled={!complete} style={{ flex: 1 }}>Confirm bracket</Btn>
+          </div>
+        </Card>
+      );
+    }
+
+    const selStyle = {
+      flex: 1, padding: "7px", borderRadius: 7, border: `1px solid ${C.line}`,
+      background: C.navy, color: C.white, fontSize: 12, fontFamily: FONT, minWidth: 0,
+    };
+
+    function BracketRound({ round, config, onSaveConfig }) {
+      const prevMap = { r16: "r32", qf: "r16", sf: "qf", final: "sf", third: "sf" };
+      const prev = prevMap[round];
+      const prevDone = config.resultsEntered[prev];
+      const prevFx = config.fixtures[prev] || [];
+      const matchCount = ROUND_MATCHES[round];
+
+      // Teams available to place into this round, drawn from the previous round's results:
+      // winners advance; the 3rd place match uses the two semi-final losers.
+      const pool = round === "third"
+        ? prevFx.map((m) => (m.winner ? (m.winner === m.teamA ? m.teamB : m.teamA) : "")).filter(Boolean)
+        : prevFx.map((m) => m.winner).filter(Boolean);
+
+      const existing = config.fixtures[round] || [];
+      const [matches, setMatches] = useState(
+        existing.length === matchCount
+          ? existing.map((m) => [m.teamA, m.teamB])
+          : Array.from({ length: matchCount }, () => ["", ""])
+      );
+
+      useEffect(() => {
+        const ex = config.fixtures[round] || [];
+        if (ex.length === matchCount) setMatches(ex.map((m) => [m.teamA, m.teamB]));
+      }, [config.fixtures[round]]);
+
+      function setSlot(i, side, val) {
+        setMatches((ms) => ms.map((m, idx) => (idx === i ? (side === 0 ? [val, m[1]] : [m[0], val]) : m)));
+      }
+      function autoPair() {
+        const ms = [];
+        for (let i = 0; i < matchCount; i++) ms.push([pool[i * 2] || "", pool[i * 2 + 1] || ""]);
+        setMatches(ms);
+      }
+      function save(confirm) {
+        const fixtures = matches.map((m, i) => {
+          const old = existing[i];
+          const keepWinner = old && old.teamA === m[0] && old.teamB === m[1] ? old.winner : null;
+          return { id: round + "_" + i, teamA: m[0], teamB: m[1], winner: keepWinner };
+        });
+        onSaveConfig({
+          ...config,
+          fixtures: { ...config.fixtures, [round]: fixtures },
+          confirmed: { ...config.confirmed, [round]: confirm ? true : config.confirmed[round] },
+        });
+      }
+
+      const placed = matches.flat().filter(Boolean);
+      const unique = new Set(placed).size === placed.length;
+      const filled = matches.every((m) => m[0] && m[1]);
+      const complete = filled && unique;
+
+      return (
+        <Card>
+          <div style={{ fontWeight: 800 }}>
+            {STAGE_LABELS[round]} — build bracket
+            {config.confirmed[round] && <span style={{ color: C.green }}> ✓ confirmed</span>}
+          </div>
+          {!prevDone ? (
+            <div style={{ fontSize: 12, color: C.muted, marginTop: 4 }}>
+              Enter {STAGE_LABELS[prev]} results first — this round's teams come from those winners.
+            </div>
+          ) : (
+            <>
+              <div style={{ fontSize: 12, color: C.muted, margin: "4px 0 8px" }}>
+                {round === "third"
+                  ? "Place the two semi-final losers into the 3rd place match."
+                  : `Set the ${matchCount} ${matchCount > 1 ? "matches" : "match"} for this round using the ${STAGE_LABELS[prev]} winners.`}
+              </div>
+              <div style={{ fontSize: 11, color: C.muted, marginBottom: 8 }}>
+                Available: {pool.length ? pool.join(", ") : "none yet"}
+              </div>
+              <Btn variant="ghost" onClick={autoPair} style={{ marginBottom: 8 }}>Auto-pair winners in order</Btn>
+              {matches.map((m, i) => (
+                <div key={i} style={{ display: "flex", gap: 5, marginBottom: 5, alignItems: "center" }}>
+                  <span style={{ fontSize: 11, color: C.muted, width: 18 }}>{i + 1}</span>
+                  {[0, 1].map((side) => (
+                    <select key={side} value={m[side]} onChange={(e) => setSlot(i, side, e.target.value)} style={selStyle}>
+                      <option value="">—</option>
+                      {pool.map((t) => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                  ))}
+                </div>
+              ))}
+              {!unique && placed.length > 0 && (
+                <div style={{ fontSize: 12, color: C.red, marginTop: 4 }}>A team is used in more than one slot.</div>
+              )}
+              <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+                <Btn variant="dark" onClick={() => save(false)} style={{ flex: 1 }}>Save draft</Btn>
+                <Btn variant="primary" onClick={() => save(true)} disabled={!complete} style={{ flex: 1 }}>Confirm bracket</Btn>
+              </div>
+            </>
+          )}
+        </Card>
+      );
+    }
+
+    /* ---------- Override ---------- */
+    function AdminOverride({ config, players, onSaveConfig }) {
+      const [pk, setPk] = useState("");
+      const [stage, setStage] = useState("group");
+      const [delta, setDelta] = useState("");
+
+      function apply() {
+        if (!pk || delta === "") return;
+        const d = parseInt(delta, 10);
+        if (isNaN(d)) return;
+        const overrides = { ...(config.overrides || {}) };
+        overrides[pk] = { ...(overrides[pk] || {}), [stage]: d };
+        onSaveConfig({ ...config, overrides });
+        setDelta("");
+      }
+      function clearOne(key, st) {
+        const overrides = { ...(config.overrides || {}) };
+        if (overrides[key]) { delete overrides[key][st]; if (Object.keys(overrides[key]).length === 0) delete overrides[key]; }
+        onSaveConfig({ ...config, overrides });
+      }
+
+      return (
+        <div>
+          <Card>
+            <div style={{ fontWeight: 800, marginBottom: 8 }}>Points adjustment</div>
+            <div style={{ fontSize: 12, color: C.muted, marginBottom: 8 }}>
+              Adds a +/- correction to a player's points for one stage (use if a result was entered wrong).
+            </div>
+            <select value={pk} onChange={(e) => setPk(e.target.value)} style={{ ...selStyle, width: "100%", marginBottom: 8 }}>
+              <option value="">Select player…</option>
+              {players.map((p) => <option key={p.key} value={p.key}>{p.name}</option>)}
+            </select>
+            <select value={stage} onChange={(e) => setStage(e.target.value)} style={{ ...selStyle, width: "100%", marginBottom: 8 }}>
+              {ALL_STAGES.map((s) => <option key={s} value={s}>{STAGE_LABELS[s]}</option>)}
+            </select>
+            <input value={delta} onChange={(e) => setDelta(e.target.value)} placeholder="Adjustment e.g. -2 or 5"
+              style={inputStyle} />
+            <Btn onClick={apply} style={{ width: "100%", marginTop: 8 }}>Apply adjustment</Btn>
+          </Card>
+
+          <Card>
+            <div style={{ fontWeight: 800, marginBottom: 8 }}>Active adjustments</div>
+            {Object.keys(config.overrides || {}).length === 0 && (
+              <div style={{ color: C.muted, fontSize: 13 }}>None.</div>
+            )}
+            {Object.entries(config.overrides || {}).map(([key, stages]) =>
+              Object.entries(stages).map(([st, d]) => (
+                <div key={key + st} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", fontSize: 13, borderBottom: `1px solid ${C.line}` }}>
+                  <span>{(players.find((p) => p.key === key) || {}).name || key} · {STAGE_LABELS[st]}</span>
+                  <span>
+                    <b style={{ color: d >= 0 ? C.green : C.red }}>{d >= 0 ? "+" : ""}{d}</b>
+                    <button onClick={() => clearOne(key, st)} style={{ marginLeft: 10, background: "none", border: "none", color: C.red, cursor: "pointer", fontFamily: FONT }}>✕</button>
+                  </span>
+                </div>
+              ))
+            )}
+          </Card>
+        </div>
+      );
+    }
+
+    /* ---------- Players ---------- */
+    function AdminPlayers({ players, config }) {
+      const ranked = rankPlayers(players, config);
+      return (
+        <Card>
+          <div style={{ fontWeight: 800, marginBottom: 8 }}>Registered players ({players.length})</div>
+          {players.length === 0 && <div style={{ color: C.muted, fontSize: 13 }}>None yet.</div>}
+          {ranked.map(({ player, score }) => (
+            <div key={player.key} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: `1px solid ${C.line}`, fontSize: 14 }}>
+              <span style={{ fontWeight: 600 }}>{player.name}</span>
+              <span style={{ color: C.gold, fontWeight: 800 }}>{score.total} pts</span>
+            </div>
+          ))}
+        </Card>
+      );
+    }
+
+    /* ---------- Danger / reset ---------- */
+    function AdminDanger({ players, onSaveConfig }) {
+      const [confirm, setConfirm] = useState(false);
+      async function reset() {
+        await fbResetAll();
+        onSaveConfig(defaultConfig());
+        setConfirm(false);
+        window.location.reload();
+      }
+      return (
+        <Card style={{ borderColor: C.red }}>
+          <div style={{ fontWeight: 800, color: C.red, marginBottom: 6 }}>Reset all {IS_TRIAL ? "trial" : "live"} data</div>
+          <div style={{ fontSize: 12, color: C.muted, marginBottom: 10 }}>
+            Permanently clears every player, pick, result and bracket for this {IS_TRIAL ? "trial" : "live"} game.
+          </div>
+          {!confirm ? (
+            <Btn variant="dark" onClick={() => setConfirm(true)}>Reset…</Btn>
+          ) : (
+            <div style={{ display: "flex", gap: 6 }}>
+              <Btn variant="primary" onClick={reset} style={{ flex: 1 }}>Yes, wipe everything</Btn>
+              <Btn variant="ghost" onClick={() => setConfirm(false)} style={{ flex: 1 }}>Cancel</Btn>
+            </div>
+          )}
+        </Card>
+      );
+    }
+    -e 
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
