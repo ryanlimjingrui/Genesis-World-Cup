@@ -1,1407 +1,1319 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-  <title>FIFA World Cup 2026 — Prediction Game</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { min-height: 100%; }
-    body { background: #0a1733; }
-    #root-loading {
-      display: flex; flex-direction: column; align-items: center;
-      justify-content: center; min-height: 100vh;
-      color: #9db0d6; font-family: sans-serif; gap: 12px;
-    }
-    .spinner {
-      width: 32px; height: 32px; border: 3px solid #27406f;
-      border-top-color: #f4c430; border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-  </style>
-  <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
-  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Genesis World Cup 2026 </title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a0e1a; --bg2:#111729; --panel:#161d33; --panel2:#1c2542;
+  --line:#28324f; --line2:#36436b;
+  --txt:#eef2ff; --muted:#94a3c4; --dim:#5d6b91;
+  --gold:#f5c542; --gold2:#ffd95e;
+  --green:#34d399; --greenbg:#0c3a2e;
+  --red:#fb7185; --redbg:#3a1620;
+  --blue:#5b8def; --pur:#a78bfa;
+  --t1:#5b8def; --t2:#34d399; --t3:#f5c542;
+  --radius:16px; --radius-sm:10px;
+  --shadow:0 10px 40px rgba(0,0,0,.45);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  font-family:'Outfit',system-ui,sans-serif;
+  background:
+    radial-gradient(1200px 600px at 80% -10%, rgba(91,141,239,.10), transparent 60%),
+    radial-gradient(900px 500px at -10% 100%, rgba(167,139,250,.10), transparent 55%),
+    var(--bg);
+  color:var(--txt);
+  min-height:100vh;
+  -webkit-font-smoothing:antialiased;
+  line-height:1.45;
+  overflow-x:hidden;
+}
+.wrap{max-width:560px;margin:0 auto;padding:0 16px 120px;}
+h1,h2,h3{font-weight:700;letter-spacing:-.01em}
+.bebas{font-family:'Bebas Neue',sans-serif;letter-spacing:.02em}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input{font-family:inherit}
+.hidden{display:none !important}
+
+/* Header */
+header.topbar{
+  position:sticky;top:0;z-index:50;
+  background:linear-gradient(180deg, rgba(10,14,26,.96), rgba(10,14,26,.82));
+  backdrop-filter:blur(14px);
+  border-bottom:1px solid var(--line);
+  padding:12px 16px;
+}
+.topbar-inner{max-width:560px;margin:0 auto;display:flex;align-items:center;gap:12px}
+.logo{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:.04em;line-height:1}
+.logo .y{color:var(--gold)}
+.topbar .sub{font-size:11px;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;margin-top:1px}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.whoami{font-size:13px;color:var(--muted);text-align:right}
+.whoami b{color:var(--txt);display:block;font-size:14px}
+.icon-btn{width:38px;height:38px;border-radius:11px;background:var(--panel);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:16px}
+.icon-btn:active{transform:scale(.94)}
+
+.trial-banner{
+  background:repeating-linear-gradient(45deg,#3a2a00,#3a2a00 14px,#4a3500 14px,#4a3500 28px);
+  color:var(--gold2);text-align:center;font-weight:700;letter-spacing:.16em;
+  font-size:12px;padding:7px;text-transform:uppercase;border-bottom:1px solid #5a4400;
+}
+
+/* Nav */
+nav.tabbar{
+  position:fixed;bottom:0;left:0;right:0;z-index:60;
+  background:linear-gradient(0deg,rgba(10,14,26,.99),rgba(10,14,26,.9));
+  backdrop-filter:blur(14px);
+  border-top:1px solid var(--line);
+  display:flex;justify-content:space-around;padding:8px 6px env(safe-area-inset-bottom,8px);
+}
+nav.tabbar button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--dim);font-size:10px;font-weight:600;letter-spacing:.04em;padding:4px 0;border-radius:10px}
+nav.tabbar button .ic{font-size:19px;line-height:1}
+nav.tabbar button.active{color:var(--gold)}
+
+/* Cards & generic */
+.card{background:linear-gradient(180deg,var(--panel),var(--bg2));border:1px solid var(--line);border-radius:var(--radius);padding:18px;margin-top:16px;box-shadow:var(--shadow)}
+.card h2{font-size:18px;margin-bottom:4px}
+.section-label{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:10px}
+.muted{color:var(--muted)}
+.dim{color:var(--dim)}
+.row{display:flex;align-items:center;gap:10px}
+.between{justify-content:space-between}
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:3px 9px;border-radius:99px;letter-spacing:.03em}
+.pill.t1{background:rgba(91,141,239,.16);color:var(--t1)}
+.pill.t2{background:rgba(52,211,153,.16);color:var(--t2)}
+.pill.t3{background:rgba(245,197,66,.16);color:var(--t3)}
+.pill.prev{background:rgba(245,197,66,.16);color:var(--gold)}
+.pill.under{background:rgba(167,139,250,.16);color:var(--pur)}
+.pill.open{background:rgba(52,211,153,.16);color:var(--green)}
+.pill.locked{background:rgba(148,163,196,.14);color:var(--muted)}
+.pill.done{background:rgba(91,141,239,.16);color:var(--blue)}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--gold);color:#1a1400;font-weight:800;padding:14px 18px;border-radius:13px;width:100%;font-size:15px;letter-spacing:.02em;transition:transform .08s,filter .15s}
+.btn:active{transform:scale(.98)}
+.btn:disabled{opacity:.4;filter:grayscale(.5)}
+.btn.secondary{background:var(--panel2);color:var(--txt);border:1px solid var(--line2)}
+.btn.danger{background:var(--redbg);color:var(--red);border:1px solid #5a2230}
+.btn.small{width:auto;padding:9px 14px;font-size:13px;border-radius:10px}
+.btn.ghost{background:transparent;border:1px solid var(--line2);color:var(--txt)}
+
+.field{margin-top:12px}
+.field label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;letter-spacing:.04em}
+.input{width:100%;background:var(--bg);border:1px solid var(--line2);color:var(--txt);padding:14px;border-radius:12px;font-size:16px;outline:none}
+.input:focus{border-color:var(--gold)}
+
+/* Login */
+.login-hero{min-height:78vh;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:30px 0}
+.login-crest{font-size:60px;margin-bottom:10px;filter:drop-shadow(0 6px 18px rgba(245,197,66,.3))}
+.login-title{font-family:'Bebas Neue',sans-serif;font-size:54px;line-height:.92;letter-spacing:.02em}
+.login-title .y{color:var(--gold)}
+.login-sub{color:var(--muted);letter-spacing:.18em;text-transform:uppercase;font-size:12px;margin-top:8px}
+.login-card{width:100%;margin-top:30px}
+.linkbtn{background:none;color:var(--muted);font-size:13px;text-decoration:underline;margin-top:18px}
+
+/* Score header */
+.scorebig{background:linear-gradient(135deg,#1c2542,#161d33);border:1px solid var(--line2);border-radius:20px;padding:22px;text-align:center;position:relative;overflow:hidden;margin-top:16px}
+.scorebig:before{content:"";position:absolute;inset:0;background:radial-gradient(400px 200px at 50% -40%,rgba(245,197,66,.18),transparent)}
+.scorebig .lbl{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);position:relative}
+.scorebig .val{font-family:'Bebas Neue',sans-serif;font-size:68px;line-height:1;color:var(--gold);position:relative;text-shadow:0 4px 20px rgba(245,197,66,.25)}
+.scorebig .rk{font-size:13px;color:var(--muted);position:relative;margin-top:2px}
+.scorebig .rk b{color:var(--txt)}
+
+/* Countdown */
+.countdown{display:flex;gap:8px;justify-content:center;margin-top:14px;position:relative}
+.cd-unit{background:rgba(0,0,0,.3);border:1px solid var(--line2);border-radius:10px;padding:7px 0;min-width:56px;text-align:center}
+.cd-unit .n{font-family:'Bebas Neue',sans-serif;font-size:26px;line-height:1;color:var(--txt)}
+.cd-unit .u{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
+
+/* Stage list */
+.stage{display:flex;align-items:center;gap:13px;padding:15px;border:1px solid var(--line);border-radius:14px;background:var(--bg2);margin-top:10px;transition:border-color .15s}
+.stage:active{border-color:var(--line2)}
+.stage.tap{cursor:pointer}
+.stage .num{width:38px;height:38px;border-radius:11px;background:var(--panel2);display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--gold);flex-shrink:0}
+.stage .info{flex:1;min-width:0}
+.stage .info .t{font-weight:700;font-size:15px}
+.stage .info .d{font-size:12px;color:var(--muted);margin-top:1px}
+.stage .chev{color:var(--dim);font-size:18px}
+
+/* Team grid / select */
+.teamlist{margin-top:6px}
+.team{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;margin-top:8px;background:var(--bg2);transition:.12s}
+.team.sel{border-color:var(--gold);background:linear-gradient(90deg,rgba(245,197,66,.10),var(--bg2))}
+.team.tap{cursor:pointer}
+.team .chk{width:24px;height:24px;border-radius:7px;border:2px solid var(--line2);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;color:#1a1400;font-weight:900}
+.team.sel .chk{background:var(--gold);border-color:var(--gold)}
+.team .rk{width:30px;text-align:center;font-family:'Bebas Neue',sans-serif;font-size:17px;color:var(--dim);flex-shrink:0}
+.team .nm{flex:1;font-weight:600;font-size:15px;min-width:0}
+.team .meta{display:flex;gap:6px;flex-shrink:0}
+.team.correct{border-color:var(--green);background:linear-gradient(90deg,var(--greenbg),var(--bg2))}
+.team.wrong{border-color:#5a2230;opacity:.7}
+.team .res{font-size:16px;flex-shrink:0}
+
+.subhead{display:flex;align-items:center;justify-content:space-between;margin-top:18px;margin-bottom:4px}
+.flt{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.flt button{font-size:12px;font-weight:600;padding:7px 12px;border-radius:99px;background:var(--panel2);border:1px solid var(--line);color:var(--muted)}
+.flt button.on{background:var(--gold);color:#1a1400;border-color:var(--gold)}
+
+.counter{position:sticky;bottom:74px;z-index:30;margin-top:16px}
+.counter-inner{background:var(--panel2);border:1px solid var(--line2);border-radius:14px;padding:12px 16px;display:flex;align-items:center;gap:12px;box-shadow:var(--shadow)}
+.counter .c{font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--gold)}
+.counter .c.bad{color:var(--red)}
+.counter .lbl{font-size:12px;color:var(--muted);flex:1}
+
+/* Match (knockout) */
+.match{border:1px solid var(--line);border-radius:14px;background:var(--bg2);margin-top:10px;overflow:hidden}
+.match .mh{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);padding:8px 14px 0}
+.mteam{display:flex;align-items:center;gap:10px;padding:13px 14px;border-bottom:1px solid var(--line);transition:.12s}
+.mteam:last-child{border-bottom:none}
+.mteam.tap{cursor:pointer}
+.mteam.sel{background:linear-gradient(90deg,rgba(245,197,66,.12),var(--bg2))}
+.mteam .dot{width:18px;height:18px;border-radius:50%;border:2px solid var(--line2);flex-shrink:0}
+.mteam.sel .dot{background:var(--gold);border-color:var(--gold)}
+.mteam .nm{flex:1;font-weight:600;font-size:15px}
+.mteam.winner{background:linear-gradient(90deg,var(--greenbg),var(--bg2))}
+.mteam.winner .nm{color:var(--green)}
+.mteam.lost{opacity:.5}
+.mteam .tag{font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px}
+.mteam.pickcorrect .tag{background:rgba(52,211,153,.18);color:var(--green)}
+.mteam.pickwrong .tag{background:var(--redbg);color:var(--red)}
+
+/* Leaderboard */
+.lbrow{display:flex;align-items:center;gap:12px;padding:13px 14px;border:1px solid var(--line);border-radius:13px;background:var(--bg2);margin-top:9px}
+.lbrow.me{border-color:var(--gold);background:linear-gradient(90deg,rgba(245,197,66,.08),var(--bg2))}
+.lbrow .rk{width:34px;height:34px;border-radius:10px;background:var(--panel2);display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:18px;flex-shrink:0}
+.lbrow.r1 .rk{background:linear-gradient(135deg,#f5c542,#b8860b);color:#1a1400}
+.lbrow.r2 .rk{background:linear-gradient(135deg,#cfd6e6,#8a93a8);color:#1a1400}
+.lbrow.r3 .rk{background:linear-gradient(135deg,#cd9b6a,#8a5a2b);color:#1a1400}
+.lbrow .nm{flex:1;font-weight:700;font-size:15px}
+.lbrow .nm .tb{font-size:11px;color:var(--dim);font-weight:500}
+.lbrow .recent{font-size:12px;color:var(--muted);text-align:right}
+.lbrow .tot{font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--gold);min-width:48px;text-align:right}
+
+/* Predictions page */
+.predplayer{margin-top:14px}
+.predplayer>.ph{display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--panel2);border:1px solid var(--line2);border-radius:12px;cursor:pointer}
+.predplayer .ph .nm{flex:1;font-weight:700}
+.predbody{padding:4px 2px}
+.predstage{margin-top:12px}
+.predstage .psh{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:6px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;font-weight:600;padding:5px 10px;border-radius:99px;background:var(--bg);border:1px solid var(--line2);color:var(--txt)}
+.chip.correct{background:var(--greenbg);border-color:var(--green);color:var(--green)}
+.lockmsg{font-size:13px;color:var(--dim);font-style:italic;padding:6px 0}
+
+/* Admin */
+.adminsec{border:1px solid var(--line2);border-radius:14px;margin-top:14px;overflow:hidden}
+.adminsec>.ah{padding:14px;background:var(--panel2);font-weight:700;display:flex;justify-content:space-between;align-items:center;cursor:pointer;font-size:15px}
+.adminsec .ab{padding:14px;border-top:1px solid var(--line)}
+.tinp{display:flex;gap:8px;align-items:center;margin-top:8px}
+.tinp .nm{flex:1;font-size:14px}
+.tinp input{width:70px;text-align:center}
+.statusgrid{display:grid;grid-template-columns:1fr auto;gap:6px 12px;font-size:13px;margin-top:8px}
+.statusgrid .ok{color:var(--green)}
+.statusgrid .no{color:var(--red)}
+
+.empty{text-align:center;color:var(--dim);padding:34px 10px;font-size:14px}
+.spinner{width:34px;height:34px;border:3px solid var(--line2);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite;margin:40px auto}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%) translateY(20px);background:var(--green);color:#06281c;font-weight:700;padding:13px 22px;border-radius:13px;box-shadow:var(--shadow);z-index:200;opacity:0;transition:.28s;pointer-events:none;max-width:90vw;text-align:center}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.err{background:var(--red);color:#330911}
+
+.modal-bg{position:fixed;inset:0;background:rgba(4,7,15,.75);backdrop-filter:blur(4px);z-index:150;display:flex;align-items:center;justify-content:center;padding:20px}
+.modal{background:var(--panel);border:1px solid var(--line2);border-radius:18px;padding:22px;max-width:420px;width:100%;box-shadow:var(--shadow)}
+.modal h3{font-size:18px;margin-bottom:6px}
+.modal .acts{display:flex;gap:10px;margin-top:18px}
+
+.note{font-size:12px;color:var(--dim);margin-top:8px;line-height:1.5}
+.divider{height:1px;background:var(--line);margin:16px 0}
+.fade-in{animation:fade .35s ease both}
+@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.stagger>*{animation:fade .4s ease both}
+.stagger>*:nth-child(1){animation-delay:.02s}
+.stagger>*:nth-child(2){animation-delay:.06s}
+.stagger>*:nth-child(3){animation-delay:.10s}
+.stagger>*:nth-child(4){animation-delay:.14s}
+.stagger>*:nth-child(5){animation-delay:.18s}
+.stagger>*:nth-child(6){animation-delay:.22s}
+.stagger>*:nth-child(7){animation-delay:.26s}
+.stagger>*:nth-child(8){animation-delay:.30s}
+</style>
 </head>
 <body>
-  <div id="root">
-    <div id="root-loading">
-      <div class="spinner"></div>
-      <div>Loading World Cup 2026 Predictions&hellip;</div>
+
+
+
+<!-- LOGIN -->
+<div id="loginView">
+  <div class="wrap">
+    <div class="login-hero fade-in">
+      <div class="login-crest">🏆</div>
+      <div class="login-title">GENESIS<br><span class="y">WORLD CUP</span></div>
+      <div class="login-sub">2026 · Prediction League </div>
+      <div class="login-card card">
+        <div class="field">
+          <label>Enter your name to play</label>
+          <input class="input" id="nameInput" placeholder="e.g. Ryan" autocomplete="off" maxlength="24">
+        </div>
+        <button class="btn" id="enterBtn" style="margin-top:14px">Enter the League →</button>
+        <button class="linkbtn" id="adminToggle">Organiser / Admin access</button>
+        <div id="adminLogin" class="hidden">
+          <div class="divider"></div>
+          <div class="field">
+            <label>Admin PIN</label>
+            <input class="input" id="pinInput" type="tel" inputmode="numeric" placeholder="••••" maxlength="4">
+          </div>
+          <button class="btn secondary" id="adminEnterBtn" style="margin-top:12px">Open Admin Panel</button>
+        </div>
+      </div>
+      <p class="note" style="text-align:center;max-width:320px">No password, no download. Your name is your profile. Same name on another device picks up where you left off.</p>
     </div>
   </div>
-  <script>
-    (function() {
-      var firebaseConfig = {
-        apiKey:            "AIzaSyCbBo8Tgv3wp5pGWZWoCpxnkvVTPsJp05U",
-        authDomain:        "genesis-world-cup.firebaseapp.com",
-        databaseURL:       "https://genesis-world-cup-default-rtdb.asia-southeast1.firebasedatabase.app",
-        projectId:         "genesis-world-cup",
-        storageBucket:     "genesis-world-cup.firebasestorage.app",
-        messagingSenderId: "872426143339",
-        appId:             "1:872426143339:web:330745b297e1be849e7b2e",
-        measurementId:     "G-7572ZG9NX1"
-      };
-      firebase.initializeApp(firebaseConfig);
-      window.__db = firebase.database();
-    })();
-  </script>
-  <script>
-const { useState, useEffect, useRef, Fragment } = React;
-const MODE = "live";
-const IS_TRIAL = MODE === "trial";
-const DB_PREFIX = IS_TRIAL ? "wc26_trial" : "wc26_live";
-const db = window.__db;
-const TEAMS = [
-  { name: "Algeria", rank: 28, tier: 1 },
-  { name: "Argentina", rank: 3, tier: 1 },
-  { name: "Australia", rank: 27, tier: 1 },
-  { name: "Austria", rank: 23, tier: 1 },
-  { name: "Belgium", rank: 9, tier: 1 },
-  { name: "Bosnia and Herzegovina", rank: 64, tier: 2 },
-  { name: "Brazil", rank: 6, tier: 1 },
-  { name: "Cabo Verde", rank: 68, tier: 2 },
-  { name: "Canada", rank: 30, tier: 1 },
-  { name: "Colombia", rank: 13, tier: 1 },
-  { name: "Congo DR", rank: 133, tier: 3 },
-  { name: "Cote d'Ivoire", rank: 34, tier: 2 },
-  { name: "Croatia", rank: 11, tier: 1 },
-  { name: "Curacao", rank: 83, tier: 3 },
-  { name: "Czechia", rank: 41, tier: 2 },
-  { name: "Ecuador", rank: 24, tier: 1 },
-  { name: "Egypt", rank: 29, tier: 1 },
-  { name: "England", rank: 4, tier: 1 },
-  { name: "France", rank: 1, tier: 1 },
-  { name: "Germany", rank: 10, tier: 1 },
-  { name: "Ghana", rank: 73, tier: 2 },
-  { name: "Haiti", rank: 82, tier: 3 },
-  { name: "Iraq", rank: 57, tier: 2 },
-  { name: "Iran", rank: 21, tier: 1 },
-  { name: "Japan", rank: 18, tier: 1 },
-  { name: "Jordan", rank: 63, tier: 2 },
-  { name: "Mexico", rank: 15, tier: 1 },
-  { name: "Morocco", rank: 7, tier: 1 },
-  { name: "Netherlands", rank: 8, tier: 1 },
-  { name: "New Zealand", rank: 85, tier: 3 },
-  { name: "Norway", rank: 31, tier: 2 },
-  { name: "Panama", rank: 33, tier: 2 },
-  { name: "Paraguay", rank: 40, tier: 2 },
-  { name: "Portugal", rank: 5, tier: 1 },
-  { name: "Qatar", rank: 55, tier: 2 },
-  { name: "Saudi Arabia", rank: 61, tier: 2 },
-  { name: "Scotland", rank: 43, tier: 2 },
-  { name: "Senegal", rank: 14, tier: 1 },
-  { name: "South Africa", rank: 60, tier: 2 },
-  { name: "South Korea", rank: 25, tier: 1 },
-  { name: "Spain", rank: 2, tier: 1 },
-  { name: "Sweden", rank: 38, tier: 2 },
-  { name: "Switzerland", rank: 19, tier: 1 },
-  { name: "Tunisia", rank: 46, tier: 2 },
-  { name: "Turkey", rank: 22, tier: 1 },
-  { name: "Uruguay", rank: 17, tier: 1 },
-  { name: "USA", rank: 16, tier: 1 },
-  { name: "Uzbekistan", rank: 50, tier: 2 }
-];
-const PREVIOUS_WINNERS = /* @__PURE__ */ new Set([
-  "Brazil",
-  "Germany",
-  "Italy",
-  "Argentina",
-  "France",
-  "Uruguay",
-  "England",
-  "Spain"
-]);
-const TIER_POINTS = { 1: 1, 2: 2, 3: 3 };
-const KNOCKOUT_POINTS = { r32: 2, r16: 4, qf: 7, sf: 12, third: 15, final: 25 };
-const ROUND_MATCHES = { r32: 16, r16: 8, qf: 4, sf: 2, third: 1, final: 1 };
-const DEADLINES = {
-  pre: "2026-06-12T02:00:00+08:00",
-  group: "2026-06-12T02:00:00+08:00",
-  r32: "2026-06-29T02:00:00+08:00",
-  r16: "2026-07-05T00:00:00+08:00",
-  qf: "2026-07-10T03:00:00+08:00",
-  sf: "2026-07-15T02:00:00+08:00",
-  third: "2026-07-19T04:00:00+08:00",
-  final: "2026-07-20T02:00:00+08:00"
-};
-const STAGE_LABELS = {
-  pre: "Champion Pick",
-  group: "Group Stage",
-  r32: "Round of 32",
-  r16: "Round of 16",
-  qf: "Quarter-Finals",
-  sf: "Semi-Finals",
-  third: "3rd Place Match",
-  final: "Final"
-};
-const ALL_STAGES = ["pre", "group", "r32", "r16", "qf", "sf", "third", "final"];
-const KNOCKOUT_ROUNDS = ["r32", "r16", "qf", "sf", "third", "final"];
-const TRIAL_SEQ = ["pre", "r32", "r16", "qf", "sf", "third", "final", "done"];
-const TEAM_BY_NAME = Object.fromEntries(TEAMS.map((t) => [t.name, t]));
-const MOCK_QUALIFIERS = [
-  "Algeria",
-  "Argentina",
-  "Australia",
-  "Austria",
-  "Belgium",
-  "Brazil",
-  "Canada",
-  "Colombia",
-  "Croatia",
-  "Ecuador",
-  "Egypt",
-  "England",
-  "France",
-  "Germany",
-  "Iran",
-  "Japan",
-  "Mexico",
-  "Morocco",
-  "Netherlands",
-  "Portugal",
-  "Senegal",
-  "South Korea",
-  "Spain",
-  "Switzerland",
-  "Turkey",
-  "Uruguay",
-  "USA",
-  "Norway",
-  "Panama",
-  "Paraguay",
-  "Sweden",
-  "Uzbekistan"
-];
-function betterTeam(a, b) {
-  return TEAM_BY_NAME[a].rank <= TEAM_BY_NAME[b].rank ? a : b;
-}
-const C = {
-  navy: "#0a1733",
-  navy2: "#0e2350",
-  panel: "#13294f",
-  panel2: "#1b3566",
-  line: "#27406f",
-  red: "#e63946",
-  gold: "#f4c430",
-  white: "#f5f7fb",
-  muted: "#9db0d6",
-  green: "#3ec96b"
-};
-const FONT = '"Trebuchet MS", "Segoe UI", Roboto, system-ui, -apple-system, sans-serif';
-async function fbGetConfig() {
-  try {
-    const snap = await db.ref(`${DB_PREFIX}/config`).get();
-    return snap.exists() ? snap.val() : null;
-  } catch {
-    return null;
-  }
-}
-async function fbSetConfig(val) {
-  try {
-    await db.ref(`${DB_PREFIX}/config`).set(val);
-    return true;
-  } catch {
-    return false;
-  }
-}
-async function fbGetPlayers() {
-  try {
-    const snap = await db.ref(`${DB_PREFIX}/players`).get();
-    return snap.exists() ? Object.values(snap.val() || {}) : [];
-  } catch {
-    return [];
-  }
-}
-async function fbSavePlayer(p) {
-  try {
-    await db.ref(`${DB_PREFIX}/players/${p.key}`).set(p);
-    return true;
-  } catch {
-    return false;
-  }
-}
-async function fbResetAll() {
-  try {
-    await db.ref(DB_PREFIX).remove();
-    return true;
-  } catch {
-    return false;
-  }
-}
-function defaultConfig() {
-  return {
-    groupQualifiers: null,
-    // array of 32 team names once entered
-    fixtures: { r32: [], r16: [], qf: [], sf: [], third: [], final: [] },
-    confirmed: { r32: false, r16: false, qf: false, sf: false, third: false, final: false },
-    resultsEntered: {
-      group: false,
-      r32: false,
-      r16: false,
-      qf: false,
-      sf: false,
-      third: false,
-      final: false
-    },
-    overrides: {},
-    // { playerKey: { stage: deltaPoints } }
-    unlocked: {},
-    // { stage: true } -> admin manually reopened a locked stage
-    trialStage: "pre"
-    // trial only
-  };
-}
-function isPreviousWinner(name) {
-  return PREVIOUS_WINNERS.has(name);
-}
-function fmtSGT(iso) {
-  const d = new Date(iso);
-  const opts = {
-    timeZone: "Asia/Singapore",
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: true
-  };
-  return d.toLocaleString("en-GB", opts) + " SGT";
-}
-function trialIdx(stage) {
-  if (stage === "group") stage = "pre";
-  return TRIAL_SEQ.indexOf(stage);
-}
-function isLockedBase(stage, config, now) {
-  if (IS_TRIAL) {
-    return trialIdx(stage) < TRIAL_SEQ.indexOf(config.trialStage);
-  }
-  return now >= new Date(DEADLINES[stage]).getTime();
-}
-function isLocked(stage, config, now) {
-  if (config.unlocked && config.unlocked[stage]) return false;
-  return isLockedBase(stage, config, now);
-}
-const PREREQ = { r32: "group", r16: "r32", qf: "r16", sf: "qf", third: "sf", final: "sf" };
-function isOpen(stage, config, now) {
-  if (isLocked(stage, config, now)) return false;
-  const overridden = config.unlocked && config.unlocked[stage];
-  if (IS_TRIAL && !overridden) {
-    const current = trialIdx(stage) === TRIAL_SEQ.indexOf(config.trialStage);
-    if (!current) return false;
-  }
-  if (PREREQ[stage]) {
-    if (!isLockedBase(PREREQ[stage], config, now)) return false;
-    if (!config.confirmed[stage]) return false;
-    if (!config.fixtures[stage] || config.fixtures[stage].length === 0) return false;
-  }
-  return true;
-}
-function stageStatus(stage, config, now) {
-  if (config.unlocked && config.unlocked[stage]) {
-    return { label: "Reopened by admin (editable)", color: C.gold };
-  }
-  if (isOpen(stage, config, now)) return { label: "Open for predictions", color: C.green };
-  if (isLocked(stage, config, now)) {
-    if (config.resultsEntered[stage]) return { label: "Results entered / complete", color: C.gold };
-    return { label: "Deadline passed (awaiting results)", color: C.red };
-  }
-  if (PREREQ[stage] && !config.confirmed[stage]) {
-    return { label: "Bracket not yet confirmed", color: C.muted };
-  }
-  return { label: "Upcoming", color: C.muted };
-}
-function emptyPlayer(name) {
-  return {
-    name,
-    key: name.trim().toLowerCase(),
-    pre: null,
-    group: [],
-    r32: {},
-    r16: {},
-    qf: {},
-    sf: {},
-    third: {},
-    final: {}
-  };
-}
-function stageComplete(player, stage, config) {
-  if (stage === "pre") return !!player.pre;
-  if (stage === "group") return (player.group || []).length === 32;
-  const fx = config.fixtures[stage] || [];
-  if (fx.length === 0) return false;
-  const picks = player[stage] || {};
-  return fx.every((m) => picks[m.id]);
-}
-function scorePlayer(player, config) {
-  const s = { pre: 0, group: 0, r32: 0, r16: 0, qf: 0, sf: 0, third: 0, final: 0 };
-  const finalFx = config.fixtures.final || [];
-  const champion = config.resultsEntered.final && finalFx[0] ? finalFx[0].winner : null;
-  if (champion && player.pre === champion) {
-    s.pre = isPreviousWinner(champion) ? 25 : 75;
-  }
-  if (config.resultsEntered.group && config.groupQualifiers) {
-    const q = new Set(config.groupQualifiers);
-    for (const t of player.group || []) {
-      if (q.has(t)) s.group += TIER_POINTS[TEAM_BY_NAME[t].tier];
-    }
-  }
-  for (const rd of KNOCKOUT_ROUNDS) {
-    if (config.resultsEntered[rd]) {
-      for (const m of config.fixtures[rd] || []) {
-        if (m.winner && player[rd] && player[rd][m.id] === m.winner) {
-          s[rd] += KNOCKOUT_POINTS[rd];
-        }
-      }
-    }
-  }
-  const ov = config.overrides && config.overrides[player.key] || {};
-  for (const k of Object.keys(ov)) {
-    if (s[k] === void 0) s[k] = 0;
-    s[k] += ov[k];
-  }
-  const total = Object.values(s).reduce((a, b) => a + b, 0);
-  let recentStage = null;
-  for (const st of ALL_STAGES) {
-    if (config.resultsEntered[st]) recentStage = st;
-  }
-  const recentPoints = recentStage ? s[recentStage] : 0;
-  const finalTeams = /* @__PURE__ */ new Set();
-  (config.fixtures.final || []).forEach((m) => {
-    if (m.teamA) finalTeams.add(m.teamA);
-    if (m.teamB) finalTeams.add(m.teamB);
-  });
-  const sfTeams = /* @__PURE__ */ new Set();
-  (config.fixtures.sf || []).forEach((m) => {
-    if (m.teamA) sfTeams.add(m.teamA);
-    if (m.teamB) sfTeams.add(m.teamB);
-  });
-  const qfTeams = /* @__PURE__ */ new Set();
-  (config.fixtures.qf || []).forEach((m) => {
-    if (m.teamA) qfTeams.add(m.teamA);
-    if (m.teamB) qfTeams.add(m.teamB);
-  });
-  const sfPicks = Object.values(player.sf || {});
-  const qfPicks = Object.values(player.qf || {});
-  const r16Picks = Object.values(player.r16 || {});
-  const tb1 = champion && player.pre === champion ? 1 : 0;
-  const tb2 = finalTeams.size === 2 && sfPicks.length === 2 && sfPicks.every((p) => finalTeams.has(p)) ? 1 : 0;
-  const tb3 = qfPicks.filter((p) => sfTeams.has(p)).length;
-  const tb4 = r16Picks.filter((p) => qfTeams.has(p)).length;
-  return { byStage: s, total, recentStage, recentPoints, tb: { tb1, tb2, tb3, tb4 } };
-}
-function rankPlayers(players, config) {
-  const scored = players.map((p) => ({ player: p, score: scorePlayer(p, config) }));
-  scored.sort((a, b) => {
-    if (b.score.total !== a.score.total) return b.score.total - a.score.total;
-    if (b.score.tb.tb1 !== a.score.tb.tb1) return b.score.tb.tb1 - a.score.tb.tb1;
-    if (b.score.tb.tb2 !== a.score.tb.tb2) return b.score.tb.tb2 - a.score.tb.tb2;
-    if (b.score.tb.tb3 !== a.score.tb.tb3) return b.score.tb.tb3 - a.score.tb.tb3;
-    if (b.score.tb.tb4 !== a.score.tb.tb4) return b.score.tb.tb4 - a.score.tb.tb4;
-    return a.player.name.localeCompare(b.player.name);
-  });
-  const fullyTied = (x, y) => x.score.total === y.score.total && x.score.tb.tb1 === y.score.tb.tb1 && x.score.tb.tb2 === y.score.tb.tb2 && x.score.tb.tb3 === y.score.tb.tb3 && x.score.tb.tb4 === y.score.tb.tb4;
-  let rank = 0, shown = 0;
-  return scored.map((row, i) => {
-    shown++;
-    if (i === 0 || !fullyTied(row, scored[i - 1])) rank = shown;
-    const shared = scored.some((o, j) => j !== i && fullyTied(o, row));
-    return { ...row, rank, shared };
-  });
-}
-function Badge({ children, color, bg }) {
-  return /* @__PURE__ */ React.createElement("span", { style: {
-    display: "inline-block",
-    padding: "2px 8px",
-    borderRadius: 999,
-    fontSize: 11,
-    fontWeight: 700,
-    letterSpacing: 0.3,
-    color: color || C.navy,
-    background: bg || C.gold,
-    whiteSpace: "nowrap"
-  } }, children);
-}
-function Btn({ children, onClick, variant = "primary", disabled, style }) {
-  const styles = {
-    primary: { background: C.red, color: "#fff", border: "none" },
-    gold: { background: C.gold, color: C.navy, border: "none" },
-    ghost: { background: "transparent", color: C.white, border: `1px solid ${C.line}` },
-    dark: { background: C.panel2, color: C.white, border: `1px solid ${C.line}` }
-  };
-  return /* @__PURE__ */ React.createElement("button", { onClick, disabled, style: {
-    padding: "11px 16px",
-    borderRadius: 10,
-    fontWeight: 700,
-    fontSize: 14,
-    cursor: disabled ? "not-allowed" : "pointer",
-    opacity: disabled ? 0.45 : 1,
-    fontFamily: FONT,
-    ...styles[variant],
-    ...style
-  } }, children);
-}
-function Card({ children, style }) {
-  return /* @__PURE__ */ React.createElement("div", { style: {
-    background: C.panel,
-    border: `1px solid ${C.line}`,
-    borderRadius: 14,
-    padding: 16,
-    marginBottom: 14,
-    ...style
-  } }, children);
-}
-function Countdown({ iso }) {
-  const [now, setNow] = useState(Date.now());
-  useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 1e3);
-    return () => clearInterval(t);
-  }, []);
-  const diff = new Date(iso).getTime() - now;
-  if (diff <= 0) return /* @__PURE__ */ React.createElement("span", { style: { color: C.red, fontWeight: 700 } }, "Deadline passed");
-  const d = Math.floor(diff / 864e5);
-  const h = Math.floor(diff % 864e5 / 36e5);
-  const m = Math.floor(diff % 36e5 / 6e4);
-  const s = Math.floor(diff % 6e4 / 1e3);
-  return /* @__PURE__ */ React.createElement("span", { style: { color: C.gold, fontWeight: 700, fontVariantNumeric: "tabular-nums" } }, d, "d ", h, "h ", m, "m ", s, "s");
-}
-function App() {
-  const [config, setConfig] = useState(null);
-  const [players, setPlayers] = useState([]);
-  const [session, setSession] = useState(null);
-  const [screen, setScreen] = useState("login");
-  const [loading, setLoading] = useState(true);
-  const [now, setNow] = useState(Date.now());
-  const [nameInput, setNameInput] = useState("");
-  const [pinInput, setPinInput] = useState("");
-  const [loginErr, setLoginErr] = useState("");
-  const [toast, setToast] = useState("");
-  const [dbError, setDbError] = useState("");
-  const toastTimer = useRef(null);
-  function showToast(msg) {
-    setToast(msg);
-    if (toastTimer.current) clearTimeout(toastTimer.current);
-    toastTimer.current = setTimeout(() => setToast(""), 2800);
-  }
-  useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 1e3);
-    return () => clearInterval(t);
-  }, []);
-  async function loadAll() {
-    const [cfg, ps] = await Promise.all([fbGetConfig(), fbGetPlayers()]);
-    let c = cfg || defaultConfig();
-    c = { ...defaultConfig(), ...c };
-    c.fixtures = { ...defaultConfig().fixtures, ...c.fixtures || {} };
-    c.confirmed = { ...defaultConfig().confirmed, ...c.confirmed || {} };
-    c.resultsEntered = { ...defaultConfig().resultsEntered, ...c.resultsEntered || {} };
-    c.unlocked = { ...c.unlocked || {} };
-    setConfig(c);
-    setPlayers(ps);
-  }
-  useEffect(() => {
-    if (!db) {
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    const timeout = setTimeout(() => {
-      setLoading(false);
-      setDbError("Could not connect to the database. Check your internet connection and try refreshing. If the problem continues, the Firebase security rules may need to be set to test mode.");
-    }, 12e3);
-    const cfgRef = db.ref(`${DB_PREFIX}/config`);
-    const plRef = db.ref(`${DB_PREFIX}/players`);
-    cfgRef.on("value", (snap) => {
-      clearTimeout(timeout);
-      let c = snap.exists() ? snap.val() : defaultConfig();
-      c = { ...defaultConfig(), ...c };
-      c.fixtures = { ...defaultConfig().fixtures, ...c.fixtures || {} };
-      c.confirmed = { ...defaultConfig().confirmed, ...c.confirmed || {} };
-      c.resultsEntered = { ...defaultConfig().resultsEntered, ...c.resultsEntered || {} };
-      c.unlocked = { ...c.unlocked || {} };
-      setConfig(c);
-      setLoading(false);
-    }, (err) => {
-      clearTimeout(timeout);
-      console.error("Firebase error:", err);
-      setLoading(false);
-      setDbError(`Database access was denied (${err.code}). Go to Firebase Console \u2192 Realtime Database \u2192 Rules and make sure read and write are both set to true.`);
-    });
-    plRef.on("value", (snap) => {
-      setPlayers(snap.exists() ? Object.values(snap.val() || {}) : []);
-    }, (err) => {
-      console.error("Players listener error:", err);
-    });
-    return () => {
-      clearTimeout(timeout);
-      cfgRef.off();
-      plRef.off();
-    };
-  }, []);
-  async function saveConfig(next) {
-    setConfig(next);
-    await fbSetConfig(next);
-  }
-  async function savePlayer(p) {
-    setPlayers((prev) => [...prev.filter((x) => x.key !== p.key), p]);
-    await fbSavePlayer(p);
-  }
-  async function savePlayerNotify(p) {
-    await savePlayer(p);
-    showToast("\u2713 Your predictions have been successfully placed!");
-  }
-  const currentPlayer = session && session.type === "player" ? players.find((p) => p.key === session.key) || null : null;
-  async function doPlayerLogin() {
-    const nm = nameInput.trim();
-    if (!nm) {
-      setLoginErr("Please enter your name.");
-      return;
-    }
-    const key = nm.toLowerCase();
-    let p = players.find((x) => x.key === key);
-    if (!p) {
-      p = emptyPlayer(nm);
-      await savePlayer(p);
-    }
-    setSession({ type: "player", key, name: p.name });
-    setScreen("home");
-    setNameInput("");
-    setLoginErr("");
-  }
-  function doAdminLogin() {
-    if (pinInput.trim() === "2026") {
-      setSession({ type: "admin" });
-      setScreen("admin");
-      setPinInput("");
-      setLoginErr("");
-    } else {
-      setLoginErr("Incorrect PIN.");
-    }
-  }
-  function logout() {
-    setSession(null);
-    setScreen("login");
-  }
-  if (loading) {
-    return /* @__PURE__ */ React.createElement(Shell, null, /* @__PURE__ */ React.createElement("div", { style: { textAlign: "center", padding: 60, color: C.muted } }, "Connecting to database\u2026"));
-  }
-  if (!db) {
-    return /* @__PURE__ */ React.createElement(Shell, null, /* @__PURE__ */ React.createElement(Card, null, /* @__PURE__ */ React.createElement("h2", { style: { color: C.red, marginTop: 0 } }, "Firebase not configured"), /* @__PURE__ */ React.createElement("p", { style: { color: C.muted } }, "The app is missing its database connection. Please contact the organiser.")));
-  }
-  if (dbError) {
-    return /* @__PURE__ */ React.createElement(Shell, null, /* @__PURE__ */ React.createElement(Card, null, /* @__PURE__ */ React.createElement("h2", { style: { color: C.red, marginTop: 0 } }, "Connection Error"), /* @__PURE__ */ React.createElement("p", { style: { color: C.muted, marginBottom: 12 } }, dbError), /* @__PURE__ */ React.createElement(Btn, { onClick: () => window.location.reload() }, "\u21BB Try again")));
-  }
-  return /* @__PURE__ */ React.createElement(Shell, null, IS_TRIAL && /* @__PURE__ */ React.createElement(TrialBanner, null), /* @__PURE__ */ React.createElement(
-    Header,
-    {
-      session,
-      currentPlayer,
-      config,
-      onLogout: logout,
-      onHome: () => setScreen((session == null ? void 0 : session.type) === "admin" ? "admin" : "home")
-    }
-  ), /* @__PURE__ */ React.createElement(Toast, { msg: toast }), screen === "login" && /* @__PURE__ */ React.createElement(
-    LoginScreen,
-    {
-      nameInput,
-      setNameInput,
-      pinInput,
-      setPinInput,
-      onPlayer: doPlayerLogin,
-      onAdmin: doAdminLogin,
-      err: loginErr
-    }
-  ), screen === "home" && currentPlayer && /* @__PURE__ */ React.createElement(
-    PlayerHome,
-    {
-      player: currentPlayer,
-      players,
-      config,
-      now,
-      onOpenStage: (st) => setScreen(st),
-      onLeaderboard: () => setScreen("leaderboard"),
-      onPredictions: () => setScreen("predictions"),
-      onRefresh: loadAll
-    }
-  ), screen === "pre" && currentPlayer && /* @__PURE__ */ React.createElement(
-    ChampionPick,
-    {
-      player: currentPlayer,
-      players,
-      config,
-      now,
-      onSave: savePlayerNotify,
-      onBack: () => setScreen("home")
-    }
-  ), screen === "group" && currentPlayer && /* @__PURE__ */ React.createElement(
-    GroupStage,
-    {
-      player: currentPlayer,
-      players,
-      config,
-      now,
-      onSave: savePlayerNotify,
-      onBack: () => setScreen("home")
-    }
-  ), KNOCKOUT_ROUNDS.includes(screen) && currentPlayer && /* @__PURE__ */ React.createElement(
-    KnockoutStage,
-    {
-      round: screen,
-      player: currentPlayer,
-      players,
-      config,
-      now,
-      onSave: savePlayerNotify,
-      onBack: () => setScreen("home")
-    }
-  ), screen === "predictions" && /* @__PURE__ */ React.createElement(
-    AllPredictions,
-    {
-      players,
-      config,
-      now,
-      onBack: () => setScreen("home"),
-      onRefresh: loadAll
-    }
-  ), screen === "leaderboard" && /* @__PURE__ */ React.createElement(
-    Leaderboard,
-    {
-      players,
-      config,
-      now,
-      onBack: () => setScreen((session == null ? void 0 : session.type) === "admin" ? "admin" : "home"),
-      onRefresh: loadAll
-    }
-  ), screen === "admin" && (session == null ? void 0 : session.type) === "admin" && /* @__PURE__ */ React.createElement(
-    AdminPanel,
-    {
-      config,
-      players,
-      now,
-      onSaveConfig: saveConfig,
-      onSavePlayer: savePlayer,
-      onLeaderboard: () => setScreen("leaderboard"),
-      onRefresh: loadAll
-    }
-  ));
-}
-function Shell({ children }) {
-  return /* @__PURE__ */ React.createElement("div", { style: {
-    minHeight: "100%",
-    background: `linear-gradient(160deg, ${C.navy}, ${C.navy2})`,
-    fontFamily: FONT,
-    color: C.white
-  } }, /* @__PURE__ */ React.createElement("div", { style: { maxWidth: 480, margin: "0 auto", padding: "16px 14px 60px" } }, children));
-}
-function TrialBanner() {
-  return /* @__PURE__ */ React.createElement("div", { style: {
-    background: C.red,
-    color: "#fff",
-    textAlign: "center",
-    fontWeight: 800,
-    letterSpacing: 1,
-    padding: "8px 10px",
-    borderRadius: 10,
-    marginBottom: 12,
-    border: `2px dashed ${C.gold}`
-  } }, "\u26A0 TRIAL MODE \u2014 TEST DATA ONLY \u26A0");
-}
-function Toast({ msg }) {
-  if (!msg) return null;
-  return /* @__PURE__ */ React.createElement("div", { style: {
-    position: "sticky",
-    top: 6,
-    zIndex: 50,
-    marginBottom: 10,
-    background: C.green,
-    color: "#06270f",
-    fontWeight: 800,
-    textAlign: "center",
-    padding: "11px 12px",
-    borderRadius: 10,
-    boxShadow: "0 6px 18px rgba(0,0,0,0.45)"
-  } }, msg);
-}
-function Header({ session, currentPlayer, config, onLogout, onHome }) {
-  return /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 } }, /* @__PURE__ */ React.createElement("div", { onClick: onHome, style: { cursor: "pointer" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 20, fontWeight: 900, color: C.white, lineHeight: 1 } }, "WORLD CUP ", /* @__PURE__ */ React.createElement("span", { style: { color: C.gold } }, "2026")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted, letterSpacing: 1 } }, "PREDICTION GAME \xB7 USA \xB7 CAN \xB7 MEX")), session && /* @__PURE__ */ React.createElement("div", { style: { textAlign: "right" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: C.muted } }, session.type === "admin" ? "ADMIN" : session.name), /* @__PURE__ */ React.createElement("button", { onClick: onLogout, style: {
-    background: "none",
-    border: "none",
-    color: C.red,
-    fontWeight: 700,
-    cursor: "pointer",
-    fontSize: 12,
-    padding: 0,
-    fontFamily: FONT
-  } }, "Log out")));
-}
-function LoginScreen({ nameInput, setNameInput, pinInput, setPinInput, onPlayer, onAdmin, err }) {
-  const [tab, setTab] = useState("player");
-  return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(Card, { style: { textAlign: "center", background: C.panel2 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 40 } }, "\u{1F3C6}"), /* @__PURE__ */ React.createElement("h2", { style: { margin: "6px 0 4px" } }, "Welcome"), /* @__PURE__ */ React.createElement("p", { style: { color: C.muted, margin: 0, fontSize: 13 } }, "Predict your way through all 104 matches.")), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, marginBottom: 14 } }, /* @__PURE__ */ React.createElement(Btn, { variant: tab === "player" ? "gold" : "dark", onClick: () => setTab("player"), style: { flex: 1 } }, "Player"), /* @__PURE__ */ React.createElement(Btn, { variant: tab === "admin" ? "gold" : "dark", onClick: () => setTab("admin"), style: { flex: 1 } }, "Admin")), tab === "player" ? /* @__PURE__ */ React.createElement(Card, null, /* @__PURE__ */ React.createElement("label", { style: { fontSize: 13, color: C.muted } }, "Your name"), /* @__PURE__ */ React.createElement(
-    "input",
-    {
-      value: nameInput,
-      onChange: (e2) => setNameInput(e2.target.value),
-      onKeyDown: (e2) => e2.key === "Enter" && onPlayer(),
-      placeholder: "e.g. Ryan",
-      style: inputStyle
-    }
-  ), /* @__PURE__ */ React.createElement("p", { style: { fontSize: 12, color: C.muted, marginTop: 8 } }, "No password needed. Returning players: type the same name to pick up where you left off."), /* @__PURE__ */ React.createElement(Btn, { onClick: onPlayer, style: { width: "100%", marginTop: 6 } }, "Enter")) : /* @__PURE__ */ React.createElement(Card, null, /* @__PURE__ */ React.createElement("label", { style: { fontSize: 13, color: C.muted } }, "Admin PIN"), /* @__PURE__ */ React.createElement(
-    "input",
-    {
-      value: pinInput,
-      type: "password",
-      onChange: (e2) => setPinInput(e2.target.value),
-      onKeyDown: (e2) => e2.key === "Enter" && onAdmin(),
-      placeholder: "\u2022\u2022\u2022\u2022",
-      style: inputStyle
-    }
-  ), /* @__PURE__ */ React.createElement(Btn, { onClick: onAdmin, style: { width: "100%", marginTop: 10 } }, "Enter admin panel")), err && /* @__PURE__ */ React.createElement("p", { style: { color: C.red, fontWeight: 700, fontSize: 13 } }, err));
-}
-const inputStyle = {
-  width: "100%",
-  padding: "12px 12px",
-  marginTop: 6,
-  borderRadius: 10,
-  border: `1px solid ${C.line}`,
-  background: C.navy,
-  color: C.white,
-  fontSize: 16,
-  fontFamily: FONT,
-  boxSizing: "border-box"
-};
-function PlayerHome({ player, players, config, now, onOpenStage, onLeaderboard, onPredictions, onRefresh }) {
-  const sc = scorePlayer(player, config);
-  let nextDeadline = null;
-  if (!IS_TRIAL) {
-    for (const st of ALL_STAGES) {
-      const t = new Date(DEADLINES[st]).getTime();
-      if (t > now) {
-        nextDeadline = { stage: st, iso: DEADLINES[st] };
-        break;
-      }
-    }
-  }
-  return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(Card, { style: { background: `linear-gradient(135deg, ${C.red}, #b21e2c)`, border: "none", textAlign: "center" } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, opacity: 0.9, letterSpacing: 1 } }, "YOUR TOTAL SCORE"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 52, fontWeight: 900, color: C.gold, lineHeight: 1 } }, sc.total), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, opacity: 0.9 } }, "points")), nextDeadline && /* @__PURE__ */ React.createElement(Card, { style: { display: "flex", justifyContent: "space-between", alignItems: "center" } }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: C.muted } }, "Next deadline \xB7 ", STAGE_LABELS[nextDeadline.stage]), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: C.muted } }, fmtSGT(nextDeadline.iso))), /* @__PURE__ */ React.createElement(Countdown, { iso: nextDeadline.iso })), IS_TRIAL && /* @__PURE__ */ React.createElement(Card, { style: { textAlign: "center", color: C.muted, fontSize: 13 } }, "Stages advance manually via the admin panel in trial mode."), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, marginBottom: 8 } }, /* @__PURE__ */ React.createElement(Btn, { variant: "gold", onClick: onLeaderboard, style: { flex: 1 } }, "\u{1F3C5} Leaderboard"), /* @__PURE__ */ React.createElement(Btn, { variant: "dark", onClick: onPredictions, style: { flex: 1 } }, "\u{1F465} Predictions")), /* @__PURE__ */ React.createElement("div", { style: { marginBottom: 14 } }, /* @__PURE__ */ React.createElement(Btn, { variant: "ghost", onClick: onRefresh, style: { width: "100%" } }, "\u21BB Refresh")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: C.muted, margin: "4px 2px 8px", letterSpacing: 1 } }, "YOUR PREDICTIONS"), ALL_STAGES.map((st) => {
-    const open = isOpen(st, config, now);
-    const locked = isLocked(st, config, now);
-    const pts = sc.byStage[st];
-    const scored = config.resultsEntered[st];
-    const pendingBracket = PREREQ[st] && !config.confirmed[st] && isLocked(PREREQ[st], config, now) && !locked;
-    return /* @__PURE__ */ React.createElement(
-      "div",
-      {
-        key: st,
-        onClick: () => (open || locked) && onOpenStage(st),
-        style: {
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          background: C.panel,
-          border: `1px solid ${open ? C.gold : C.line}`,
-          borderRadius: 12,
-          padding: "13px 14px",
-          marginBottom: 8,
-          cursor: open || locked ? "pointer" : "default",
-          opacity: open || locked ? 1 : 0.55
-        }
-      },
-      /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontWeight: 700 } }, STAGE_LABELS[st]), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted } }, open ? "Open \u2014 tap to predict" : pendingBracket ? "Next round bracket coming soon" : locked ? "Locked" : "Upcoming")),
-      /* @__PURE__ */ React.createElement("div", { style: { textAlign: "right" } }, scored && /* @__PURE__ */ React.createElement(Badge, { bg: C.gold }, pts, " pts"), !scored && open && /* @__PURE__ */ React.createElement(Badge, { bg: C.green, color: "#06270f" }, "OPEN"), !scored && locked && /* @__PURE__ */ React.createElement(Badge, { bg: C.panel2, color: C.muted }, "LOCKED"))
-    );
-  }));
-}
-function ChampionPick({ player, players, config, now, onSave, onBack }) {
-  const open = isOpen("pre", config, now);
-  const locked = isLocked("pre", config, now);
-  const [pick, setPick] = useState(player.pre);
-  const [msg, setMsg] = useState("");
-  const sorted = [...TEAMS].sort((a, b) => a.name.localeCompare(b.name));
-  async function save() {
-    await onSave({ ...player, pre: pick });
-    setMsg("Saved!");
-    setTimeout(() => setMsg(""), 1500);
-  }
-  return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(StageHeader, { title: "Champion Pick", stage: "pre", config, now, onBack }), /* @__PURE__ */ React.createElement(Card, null, /* @__PURE__ */ React.createElement("p", { style: { marginTop: 0, fontSize: 13, color: C.muted } }, "Pick the one team you think will win the World Cup.", /* @__PURE__ */ React.createElement("b", { style: { color: C.gold } }, " 25 pts"), " if a previous winner takes the title,", /* @__PURE__ */ React.createElement("b", { style: { color: C.gold } }, " 75 pts"), " if an underdog does.")), locked && /* @__PURE__ */ React.createElement(LockedNote, null), /* @__PURE__ */ React.createElement("div", null, sorted.map((t) => {
-    const prev = isPreviousWinner(t.name);
-    const selected = pick === t.name;
-    return /* @__PURE__ */ React.createElement(
-      "div",
-      {
-        key: t.name,
-        onClick: () => open && setPick(t.name),
-        style: {
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          background: selected ? C.panel2 : C.panel,
-          border: `1px solid ${selected ? C.gold : C.line}`,
-          borderRadius: 10,
-          padding: "11px 13px",
-          marginBottom: 7,
-          cursor: open ? "pointer" : "default"
-        }
-      },
-      /* @__PURE__ */ React.createElement("div", { style: { fontWeight: selected ? 800 : 600 } }, selected ? "\u2605 " : "", t.name),
-      /* @__PURE__ */ React.createElement(Badge, { bg: prev ? C.gold : C.panel2, color: prev ? C.navy : C.muted }, prev ? "Previous Winner" : "Underdog")
-    );
-  })), open && /* @__PURE__ */ React.createElement("div", { style: { position: "sticky", bottom: 8, marginTop: 12 } }, /* @__PURE__ */ React.createElement(Btn, { onClick: save, disabled: !pick, style: { width: "100%" } }, msg || (pick ? `Lock in ${pick}` : "Select a team"))), locked && /* @__PURE__ */ React.createElement(OthersPicks, { players, render: (p) => p.pre || "\u2014", label: "Champion picks" }));
-}
-function GroupStage({ player, players, config, now, onSave, onBack }) {
-  const open = isOpen("group", config, now);
-  const locked = isLocked("group", config, now);
-  const [picks, setPicks] = useState(new Set(player.group || []));
-  const [msg, setMsg] = useState("");
-  const sorted = [...TEAMS].sort((a, b) => a.tier - b.tier || a.name.localeCompare(b.name));
-  function toggle(name) {
-    if (!open) return;
-    const next = new Set(picks);
-    if (next.has(name)) next.delete(name);
-    else next.add(name);
-    setPicks(next);
-  }
-  async function save() {
-    if (picks.size !== 32) {
-      setMsg(`You have ${picks.size} selected \u2014 you must pick exactly 32.`);
-      return;
-    }
-    await onSave({ ...player, group: [...picks] });
-    setMsg("Saved!");
-    setTimeout(() => setMsg(""), 1500);
-  }
-  const q = config.resultsEntered.group && config.groupQualifiers ? new Set(config.groupQualifiers) : null;
-  let currentTier = 0;
-  return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(StageHeader, { title: "Group Stage", stage: "group", config, now, onBack }), /* @__PURE__ */ React.createElement(Card, null, /* @__PURE__ */ React.createElement("p", { style: { marginTop: 0, fontSize: 13, color: C.muted } }, "Select exactly ", /* @__PURE__ */ React.createElement("b", { style: { color: C.gold } }, "32 teams"), " you think will reach the Round of 32. Lower-ranked teams score more: Tier 1 = 1pt, Tier 2 = 2pts, Tier 3 = 3pts per correct pick.")), locked && /* @__PURE__ */ React.createElement(LockedNote, null), /* @__PURE__ */ React.createElement("div", { style: {
-    position: "sticky",
-    top: 0,
-    zIndex: 5,
-    background: C.navy,
-    padding: "8px 0",
-    marginBottom: 6
-  } }, /* @__PURE__ */ React.createElement(Badge, { bg: picks.size === 32 ? C.green : C.red, color: "#fff" }, picks.size, " / 32 selected")), sorted.map((t) => {
-    const showTier = t.tier !== currentTier;
-    currentTier = t.tier;
-    const selected = picks.has(t.name);
-    const correct = q && selected && q.has(t.name);
-    const wrong = q && selected && !q.has(t.name);
-    return /* @__PURE__ */ React.createElement("div", { key: t.name }, showTier && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: C.gold, fontWeight: 800, margin: "10px 2px 6px", letterSpacing: 1 } }, "TIER ", t.tier, " \xB7 ", TIER_POINTS[t.tier], " pt", TIER_POINTS[t.tier] > 1 ? "s" : "", " each"), /* @__PURE__ */ React.createElement(
-      "div",
-      {
-        onClick: () => toggle(t.name),
-        style: {
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          background: selected ? C.panel2 : C.panel,
-          border: `1px solid ${correct ? C.green : wrong ? C.red : selected ? C.gold : C.line}`,
-          borderRadius: 10,
-          padding: "10px 13px",
-          marginBottom: 6,
-          cursor: open ? "pointer" : "default"
-        }
-      },
-      /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10 } }, /* @__PURE__ */ React.createElement("span", { style: {
-        width: 20,
-        height: 20,
-        borderRadius: 5,
-        border: `1px solid ${C.line}`,
-        display: "inline-flex",
-        alignItems: "center",
-        justifyContent: "center",
-        background: selected ? C.gold : "transparent",
-        color: C.navy,
-        fontWeight: 900,
-        fontSize: 13
-      } }, selected ? "\u2713" : ""), /* @__PURE__ */ React.createElement("span", { style: { fontWeight: selected ? 700 : 500 } }, t.name)),
-      /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 6, alignItems: "center" } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, color: C.muted } }, "#", t.rank), /* @__PURE__ */ React.createElement(Badge, { bg: C.panel2, color: C.muted }, TIER_POINTS[t.tier], "pt"), correct && /* @__PURE__ */ React.createElement(Badge, { bg: C.green, color: "#fff" }, "\u2713"))
-    ));
-  }), open && /* @__PURE__ */ React.createElement("div", { style: { position: "sticky", bottom: 8, marginTop: 12 } }, /* @__PURE__ */ React.createElement(
-    Btn,
-    {
-      onClick: save,
-      style: { width: "100%" },
-      variant: picks.size === 32 ? "primary" : "dark"
-    },
-    msg || (picks.size === 32 ? "Lock in 32 teams" : `Select ${32 - picks.size > 0 ? 32 - picks.size + " more" : picks.size - 32 + " too many"}`)
-  )), msg && !open && /* @__PURE__ */ React.createElement("p", { style: { color: C.red } }, msg), locked && /* @__PURE__ */ React.createElement(
-    OthersPicks,
-    {
-      players,
-      render: (p) => (p.group || []).length + " teams",
-      label: "Group picks (count)"
-    }
-  ));
-}
-function KnockoutStage({ round, player, players, config, now, onSave, onBack }) {
-  const open = isOpen(round, config, now);
-  const locked = isLocked(round, config, now);
-  const fixtures = config.fixtures[round] || [];
-  const confirmed = config.confirmed[round];
-  const prereqDone = !PREREQ[round] || isLocked(PREREQ[round], config, now);
-  const [picks, setPicks] = useState({ ...player[round] || {} });
-  const [msg, setMsg] = useState("");
-  function choose(matchId, team) {
-    if (!open) return;
-    setPicks((p) => ({ ...p, [matchId]: team }));
-  }
-  async function save() {
-    await onSave({ ...player, [round]: picks });
-    setMsg("Saved!");
-    setTimeout(() => setMsg(""), 1500);
-  }
-  if (!confirmed || fixtures.length === 0) {
-    return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(StageHeader, { title: STAGE_LABELS[round], stage: round, config, now, onBack }), /* @__PURE__ */ React.createElement(Card, { style: { textAlign: "center", color: C.muted } }, !prereqDone ? "This round opens once the previous round is complete." : "Next round bracket coming soon \u2014 the admin is still confirming the fixtures."));
-  }
-  return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(StageHeader, { title: STAGE_LABELS[round], stage: round, config, now, onBack }), /* @__PURE__ */ React.createElement(Card, null, /* @__PURE__ */ React.createElement("p", { style: { marginTop: 0, fontSize: 13, color: C.muted } }, "Pick the winner of each match. ", /* @__PURE__ */ React.createElement("b", { style: { color: C.gold } }, KNOCKOUT_POINTS[round], " pts"), " per correct winner.")), locked && /* @__PURE__ */ React.createElement(LockedNote, null), fixtures.map((m, i) => {
-    const pick = picks[m.id];
-    const resultIn = config.resultsEntered[round] && m.winner;
-    return /* @__PURE__ */ React.createElement(Card, { key: m.id, style: { padding: 12 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted, marginBottom: 8 } }, "Match ", i + 1), [m.teamA, m.teamB].map((team) => {
-      const sel = pick === team;
-      const isWinner = resultIn && m.winner === team;
-      const pickedRight = resultIn && sel && m.winner === team;
-      const pickedWrong = resultIn && sel && m.winner !== team;
-      return /* @__PURE__ */ React.createElement(
-        "div",
-        {
-          key: team,
-          onClick: () => choose(m.id, team),
-          style: {
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            padding: "11px 12px",
-            borderRadius: 9,
-            marginBottom: 6,
-            background: sel ? C.panel2 : C.navy,
-            border: `1px solid ${pickedRight ? C.green : pickedWrong ? C.red : sel ? C.gold : C.line}`,
-            cursor: open ? "pointer" : "default"
-          }
-        },
-        /* @__PURE__ */ React.createElement("span", { style: { fontWeight: sel ? 800 : 600 } }, sel ? "\u2713 " : "", team),
-        /* @__PURE__ */ React.createElement("span", { style: { display: "flex", gap: 6 } }, isWinner && /* @__PURE__ */ React.createElement(Badge, { bg: C.green, color: "#fff" }, "WON"))
-      );
-    }));
-  }), open && /* @__PURE__ */ React.createElement("div", { style: { position: "sticky", bottom: 8, marginTop: 12 } }, /* @__PURE__ */ React.createElement(Btn, { onClick: save, style: { width: "100%" } }, msg || `Save picks (${Object.keys(picks).length}/${fixtures.length})`)), locked && /* @__PURE__ */ React.createElement(
-    OthersPicks,
-    {
-      players,
-      render: (p) => {
-        const obj = p[round] || {};
-        const n = Object.keys(obj).length;
-        return n + " picks";
-      },
-      label: STAGE_LABELS[round] + " picks (count)"
-    }
-  ));
-}
-function StageHeader({ title, stage, config, now, onBack }) {
-  return /* @__PURE__ */ React.createElement("div", { style: { marginBottom: 12 } }, /* @__PURE__ */ React.createElement("button", { onClick: onBack, style: {
-    background: "none",
-    border: "none",
-    color: C.gold,
-    fontWeight: 700,
-    cursor: "pointer",
-    padding: 0,
-    fontSize: 14,
-    fontFamily: FONT
-  } }, "\u2039 Back"), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 6 } }, /* @__PURE__ */ React.createElement("h2", { style: { margin: 0 } }, title), config.unlocked && config.unlocked[stage] ? /* @__PURE__ */ React.createElement("div", { style: { textAlign: "right", fontSize: 12 } }, /* @__PURE__ */ React.createElement("div", { style: { color: C.gold, fontWeight: 700 } }, "\u23F1 Reopened by admin"), /* @__PURE__ */ React.createElement("div", { style: { color: C.muted } }, "Last-minute edits allowed")) : !IS_TRIAL && !isLocked(stage, config, now) ? /* @__PURE__ */ React.createElement("div", { style: { textAlign: "right", fontSize: 12 } }, /* @__PURE__ */ React.createElement("div", { style: { color: C.muted } }, "Locks in"), /* @__PURE__ */ React.createElement(Countdown, { iso: DEADLINES[stage] })) : null), !IS_TRIAL && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted } }, "Deadline: ", fmtSGT(DEADLINES[stage])));
-}
-function LockedNote() {
-  return /* @__PURE__ */ React.createElement(Card, { style: { background: C.panel2, borderColor: C.red } }, /* @__PURE__ */ React.createElement("div", { style: { color: C.red, fontWeight: 700, fontSize: 13 } }, "\u{1F512} This stage is locked"), /* @__PURE__ */ React.createElement("div", { style: { color: C.muted, fontSize: 12 } }, "Your picks are final and now visible to everyone."));
-}
-function OthersPicks({ players, render, label }) {
-  return /* @__PURE__ */ React.createElement(Card, { style: { marginTop: 12 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, color: C.gold, fontWeight: 800, marginBottom: 8 } }, label, " \u2014 everyone"), players.length === 0 && /* @__PURE__ */ React.createElement("div", { style: { color: C.muted, fontSize: 13 } }, "No players yet."), players.map((p) => /* @__PURE__ */ React.createElement("div", { key: p.key, style: {
-    display: "flex",
-    justifyContent: "space-between",
-    padding: "6px 0",
-    borderBottom: `1px solid ${C.line}`,
-    fontSize: 13
-  } }, /* @__PURE__ */ React.createElement("span", null, p.name), /* @__PURE__ */ React.createElement("span", { style: { color: C.muted } }, render(p)))));
-}
-function RecentCell({ score }) {
-  if (score.recentStage === "final" && score.byStage.pre > 0) {
-    return /* @__PURE__ */ React.createElement("span", null, score.byStage.final, /* @__PURE__ */ React.createElement("span", { style: { color: C.gold, fontWeight: 800 } }, " + ", score.byStage.pre));
-  }
-  return /* @__PURE__ */ React.createElement("span", null, score.recentPoints);
-}
-function Leaderboard({ players, config, now, onBack, onRefresh }) {
-  const ranked = rankPlayers(players, config);
-  let recentStage = null;
-  for (const st of ALL_STAGES) if (config.resultsEntered[st]) recentStage = st;
-  return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 } }, /* @__PURE__ */ React.createElement("button", { onClick: onBack, style: {
-    background: "none",
-    border: "none",
-    color: C.gold,
-    fontWeight: 700,
-    cursor: "pointer",
-    padding: 0,
-    fontSize: 14,
-    fontFamily: FONT
-  } }, "\u2039 Back"), /* @__PURE__ */ React.createElement(Btn, { variant: "ghost", onClick: onRefresh, style: { padding: "6px 12px" } }, "\u21BB")), /* @__PURE__ */ React.createElement("h2", { style: { marginTop: 0 } }, "\u{1F3C5} Leaderboard"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: C.muted, marginBottom: 10 } }, "Most recent stage: ", recentStage ? STAGE_LABELS[recentStage] : "none yet"), /* @__PURE__ */ React.createElement("div", { style: {
-    display: "grid",
-    gridTemplateColumns: "32px 1fr auto auto",
-    gap: 4,
-    fontSize: 11,
-    color: C.muted,
-    fontWeight: 700,
-    padding: "0 6px 6px"
-  } }, /* @__PURE__ */ React.createElement("div", null, "#"), /* @__PURE__ */ React.createElement("div", null, "Player"), /* @__PURE__ */ React.createElement("div", { style: { textAlign: "right" } }, "Recent"), /* @__PURE__ */ React.createElement("div", { style: { textAlign: "right", paddingLeft: 10 } }, "Total")), ranked.length === 0 && /* @__PURE__ */ React.createElement(Card, { style: { color: C.muted } }, "No players registered yet."), ranked.map(({ player, score, rank, shared }) => /* @__PURE__ */ React.createElement("div", { key: player.key, style: {
-    display: "grid",
-    gridTemplateColumns: "32px 1fr auto auto",
-    gap: 4,
-    alignItems: "center",
-    background: rank === 1 ? "linear-gradient(90deg, #2a2410, " + C.panel + ")" : C.panel,
-    border: `1px solid ${rank === 1 ? C.gold : C.line}`,
-    borderRadius: 10,
-    padding: "11px 6px",
-    marginBottom: 7
-  } }, /* @__PURE__ */ React.createElement("div", { style: { fontWeight: 900, color: rank === 1 ? C.gold : C.white, textAlign: "center" } }, rank), /* @__PURE__ */ React.createElement("div", { style: { fontWeight: 700 } }, player.name, shared && /* @__PURE__ */ React.createElement("span", { style: { color: C.muted, fontSize: 11 } }, " (tied)")), /* @__PURE__ */ React.createElement("div", { style: { textAlign: "right", color: C.muted, fontVariantNumeric: "tabular-nums" } }, /* @__PURE__ */ React.createElement(RecentCell, { score })), /* @__PURE__ */ React.createElement("div", { style: { textAlign: "right", paddingLeft: 10, fontWeight: 900, color: C.gold } }, score.total))), /* @__PURE__ */ React.createElement(Card, { style: { marginTop: 8, fontSize: 11, color: C.muted } }, "Recent shows points from the latest scored stage. After the Final, a value like", /* @__PURE__ */ React.createElement("span", { style: { color: C.white } }, " 25 "), /* @__PURE__ */ React.createElement("span", { style: { color: C.gold } }, "+ 25"), " means Final-match points plus your pre-tournament champion bonus (the gold figure), which both land at the end."), /* @__PURE__ */ React.createElement(Card, { style: { marginTop: 8, fontSize: 11, color: C.muted } }, "Ties are broken by: (1) correct champion, (2) both finalists, (3) most semi-finalists, (4) most quarter-finalists, then shared."));
-}
-function AllPredictions({ players, config, now, onBack, onRefresh }) {
-  const revealed = (st) => isLocked(st, config, now) || config.resultsEntered[st];
-  const openStages = ALL_STAGES.filter((st) => revealed(st));
-  const [stage, setStage] = useState(
-    openStages.length ? openStages[openStages.length - 1] : "pre"
-  );
-  const stVisible = revealed(stage);
-  function renderPicks(p) {
-    if (stage === "pre") {
-      return /* @__PURE__ */ React.createElement("span", { style: { fontWeight: 700 } }, p.pre || /* @__PURE__ */ React.createElement("span", { style: { color: C.muted, fontWeight: 400 } }, "No pick"));
-    }
-    if (stage === "group") {
-      const g = [...p.group || []].sort();
-      if (g.length === 0) return /* @__PURE__ */ React.createElement("span", { style: { color: C.muted } }, "No picks");
-      const q = config.resultsEntered.group && config.groupQualifiers ? new Set(config.groupQualifiers) : null;
-      return /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 4 } }, g.map((t) => /* @__PURE__ */ React.createElement("span", { key: t, style: {
-        fontSize: 11,
-        padding: "2px 6px",
-        borderRadius: 6,
-        background: q && q.has(t) ? C.green : C.panel2,
-        color: q && q.has(t) ? "#fff" : C.muted
-      } }, t)));
-    }
-    const fx = config.fixtures[stage] || [];
-    const picks = p[stage] || {};
-    if (fx.length === 0) return /* @__PURE__ */ React.createElement("span", { style: { color: C.muted } }, "\u2014");
-    return /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 4 } }, fx.map((m) => {
-      const pick = picks[m.id];
-      const correct = config.resultsEntered[stage] && m.winner && pick === m.winner;
-      const wrong = config.resultsEntered[stage] && m.winner && pick && pick !== m.winner;
-      return /* @__PURE__ */ React.createElement("span", { key: m.id, style: {
-        fontSize: 11,
-        padding: "2px 6px",
-        borderRadius: 6,
-        background: correct ? C.green : C.panel2,
-        color: correct ? "#fff" : wrong ? C.red : C.muted
-      } }, pick || "\u2014");
-    }));
-  }
-  return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 } }, /* @__PURE__ */ React.createElement("button", { onClick: onBack, style: {
-    background: "none",
-    border: "none",
-    color: C.gold,
-    fontWeight: 700,
-    cursor: "pointer",
-    padding: 0,
-    fontSize: 14,
-    fontFamily: FONT
-  } }, "\u2039 Back"), /* @__PURE__ */ React.createElement(Btn, { variant: "ghost", onClick: onRefresh, style: { padding: "6px 12px" } }, "\u21BB")), /* @__PURE__ */ React.createElement("h2", { style: { marginTop: 0 } }, "\u{1F465} Everyone's Predictions"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: C.muted, marginBottom: 12 } }, "Each stage's picks unlock for everyone once that stage's deadline has passed."), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 } }, ALL_STAGES.map((st) => {
-    const lk = revealed(st);
-    return /* @__PURE__ */ React.createElement(
-      Btn,
-      {
-        key: st,
-        variant: stage === st ? "gold" : "dark",
-        disabled: !lk,
-        onClick: () => setStage(st),
-        style: { padding: "6px 10px", fontSize: 12 }
-      },
-      lk ? "" : "\u{1F512} ",
-      STAGE_LABELS[st]
-    );
-  })), !stVisible ? /* @__PURE__ */ React.createElement(Card, { style: { textAlign: "center", color: C.muted } }, "\u{1F512} Hidden until the ", STAGE_LABELS[stage], " deadline passes.") : players.length === 0 ? /* @__PURE__ */ React.createElement(Card, { style: { color: C.muted } }, "No players yet.") : /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, marginBottom: 8, color: config.resultsEntered[stage] ? C.green : C.muted } }, config.resultsEntered[stage] ? "Results are in \u2014 correct picks are highlighted in green." : "Deadline passed. Results not entered yet, so picks are shown without scoring."), players.map((p) => /* @__PURE__ */ React.createElement(Card, { key: p.key, style: { padding: 12 } }, /* @__PURE__ */ React.createElement("div", { style: { fontWeight: 800, marginBottom: 6 } }, p.name), renderPicks(p)))));
-}
-function AdminPanel({ config, players, now, onSaveConfig, onSavePlayer, onLeaderboard, onRefresh }) {
-  const [tab, setTab] = useState("stages");
-  return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", marginBottom: 12 } }, /* @__PURE__ */ React.createElement("h2", { style: { margin: 0 } }, "\u2699 Admin"), /* @__PURE__ */ React.createElement(Btn, { variant: "ghost", onClick: onRefresh, style: { padding: "6px 12px" } }, "\u21BB")), IS_TRIAL && /* @__PURE__ */ React.createElement(TrialAdvance, { config, onSaveConfig, now }), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 } }, [
-    ["stages", "Stages"],
-    ["results", "Results"],
-    ["bracket", "Bracket"],
-    ["submissions", "Check"],
-    ["override", "Override"],
-    ["players", "Players"],
-    ["board", "Leaderboard"],
-    ["danger", "Reset"]
-  ].map(([k, label]) => /* @__PURE__ */ React.createElement(
-    Btn,
-    {
-      key: k,
-      variant: tab === k ? "gold" : "dark",
-      onClick: () => k === "board" ? onLeaderboard() : setTab(k),
-      style: { padding: "7px 11px", fontSize: 12 }
-    },
-    label
-  ))), tab === "stages" && /* @__PURE__ */ React.createElement(AdminStages, { config, now, onSaveConfig }), tab === "results" && /* @__PURE__ */ React.createElement(AdminResults, { config, now, onSaveConfig }), tab === "bracket" && /* @__PURE__ */ React.createElement(AdminBracket, { config, onSaveConfig }), tab === "submissions" && /* @__PURE__ */ React.createElement(AdminSubmissions, { players, config, now }), tab === "override" && /* @__PURE__ */ React.createElement(AdminOverride, { config, players, onSaveConfig }), tab === "players" && /* @__PURE__ */ React.createElement(AdminPlayers, { players, config }), tab === "danger" && /* @__PURE__ */ React.createElement(AdminDanger, { players, onSaveConfig }));
-}
-function TrialAdvance({ config, onSaveConfig, now }) {
-  const idx = TRIAL_SEQ.indexOf(config.trialStage);
-  const next = idx < TRIAL_SEQ.length - 1 ? TRIAL_SEQ[idx + 1] : null;
-  const done = config.trialStage === "done";
-  const curLabel = done ? "All predictions locked" : config.trialStage === "pre" ? "Pre-tournament (Champion + Group)" : STAGE_LABELS[config.trialStage];
-  const lockLabel = config.trialStage === "pre" ? "pre-tournament" : STAGE_LABELS[config.trialStage];
-  const opensNext = next && next !== "done" ? next === "pre" ? "Pre-tournament" : STAGE_LABELS[next] : null;
-  return /* @__PURE__ */ React.createElement(Card, { style: { borderColor: C.gold } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: C.muted } }, "TRIAL \xB7 ", done ? "tournament status" : "predictions currently open"), /* @__PURE__ */ React.createElement("div", { style: { fontWeight: 800, color: C.gold, marginBottom: 8 } }, curLabel), /* @__PURE__ */ React.createElement(
-    Btn,
-    {
-      variant: "gold",
-      disabled: !next,
-      onClick: () => onSaveConfig({ ...config, trialStage: next })
-    },
-    done ? "Tournament complete \u2014 all locked" : `\u{1F512} Lock ${lockLabel} predictions`
-  ), !done && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted, marginTop: 8 } }, opensNext ? `Locks the current picks and reveals them to everyone, then opens ${opensNext}.` : "Locks the Final picks and reveals them to everyone. This is the last stage."));
-}
-function AdminStages({ config, now, onSaveConfig }) {
-  function setUnlock(st, val) {
-    const unlocked = { ...config.unlocked || {} };
-    if (val) unlocked[st] = true;
-    else delete unlocked[st];
-    onSaveConfig({ ...config, unlocked });
-  }
-  return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(Card, { style: { fontSize: 12, color: C.muted } }, "Unlock reopens a stage that has already locked, so players can make last-minute changes. While reopened, that stage's picks are hidden from other players again until you re-lock it."), ALL_STAGES.map((st) => {
-    const s = stageStatus(st, config, now);
-    const reopened = config.unlocked && config.unlocked[st];
-    const naturallyLocked = isLockedBase(st, config, now);
-    return /* @__PURE__ */ React.createElement("div", { key: st, style: {
-      background: C.panel,
-      border: `1px solid ${reopened ? C.gold : C.line}`,
-      borderRadius: 10,
-      padding: "12px 14px",
-      marginBottom: 7
-    } }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" } }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontWeight: 700 } }, STAGE_LABELS[st]), !IS_TRIAL && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted } }, fmtSGT(DEADLINES[st]))), /* @__PURE__ */ React.createElement(Badge, { bg: C.panel2, color: s.color }, s.label)), reopened ? /* @__PURE__ */ React.createElement(Btn, { variant: "primary", onClick: () => setUnlock(st, false), style: { width: "100%", marginTop: 10, padding: "8px" } }, "\u{1F512} Re-lock ", STAGE_LABELS[st], " now") : naturallyLocked ? /* @__PURE__ */ React.createElement(Btn, { variant: "dark", onClick: () => setUnlock(st, true), style: { width: "100%", marginTop: 10, padding: "8px" } }, "\u{1F513} Unlock for last-minute edits") : null);
-  }));
-}
-function AdminSubmissions({ players, config, now }) {
-  const abbr = { pre: "Pre", group: "Grp", r32: "R32", r16: "R16", qf: "QF", sf: "SF", third: "3rd", final: "Fin" };
-  const openStages = ALL_STAGES.filter((st) => isOpen(st, config, now));
-  return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(Card, null, /* @__PURE__ */ React.createElement("div", { style: { fontWeight: 800, marginBottom: 6 } }, "Submission tracker"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: C.muted, marginBottom: 10 } }, "\u2713 means the player has fully completed that stage's predictions (champion chosen, exactly 32 group teams, or every match in a confirmed knockout round picked)."), players.length === 0 ? /* @__PURE__ */ React.createElement("div", { style: { color: C.muted, fontSize: 13 } }, "No players registered yet.") : /* @__PURE__ */ React.createElement("div", { style: { overflowX: "auto" } }, /* @__PURE__ */ React.createElement("div", { style: {
-    display: "grid",
-    gridTemplateColumns: `92px repeat(${ALL_STAGES.length}, 1fr)`,
-    gap: 3,
-    minWidth: 372,
-    alignItems: "center"
-  } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted, fontWeight: 700 } }, "Player"), ALL_STAGES.map((st) => /* @__PURE__ */ React.createElement("div", { key: st, style: { fontSize: 10, color: C.muted, fontWeight: 700, textAlign: "center" } }, abbr[st])), players.map((p) => /* @__PURE__ */ React.createElement(Fragment, { key: p.key }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }, p.name), ALL_STAGES.map((st) => {
-    const done = stageComplete(p, st, config);
-    return /* @__PURE__ */ React.createElement("div", { key: st, style: { textAlign: "center", color: done ? C.green : C.line, fontWeight: 900 } }, done ? "\u2713" : "\xB7");
-  })))))), openStages.length === 0 && /* @__PURE__ */ React.createElement(Card, { style: { color: C.muted, fontSize: 13 } }, "No stage is currently open for predictions."), openStages.map((st) => {
-    const missing = players.filter((p) => !stageComplete(p, st, config));
-    return /* @__PURE__ */ React.createElement(Card, { key: st, style: { borderColor: missing.length ? C.red : C.green } }, /* @__PURE__ */ React.createElement("div", { style: { fontWeight: 800 } }, STAGE_LABELS[st], " \u2014 open now"), players.length === 0 ? /* @__PURE__ */ React.createElement("div", { style: { color: C.muted, fontSize: 13, marginTop: 4 } }, "No players yet.") : missing.length === 0 ? /* @__PURE__ */ React.createElement("div", { style: { color: C.green, fontSize: 13, marginTop: 4 } }, "All ", players.length, " players have submitted \u2713") : /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13, marginTop: 4 } }, /* @__PURE__ */ React.createElement("span", { style: { color: C.red, fontWeight: 700 } }, missing.length, " of ", players.length, " not yet submitted: "), /* @__PURE__ */ React.createElement("span", { style: { color: C.muted } }, missing.map((p) => p.name).join(", "))));
-  }));
-}
-function AdminResults({ config, now, onSaveConfig }) {
-  return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(GroupResults, { config, onSaveConfig }), KNOCKOUT_ROUNDS.map((rd) => /* @__PURE__ */ React.createElement(KnockoutResults, { key: rd, round: rd, config, onSaveConfig })));
-}
-function GroupResults({ config, onSaveConfig }) {
-  const [sel, setSel] = useState(new Set(config.groupQualifiers || []));
-  const sorted = [...TEAMS].sort((a, b) => a.tier - b.tier || a.name.localeCompare(b.name));
-  function toggle(n) {
-    const next = new Set(sel);
-    next.has(n) ? next.delete(n) : next.add(n);
-    setSel(next);
-  }
-  function save() {
-    onSaveConfig({
-      ...config,
-      groupQualifiers: [...sel],
-      resultsEntered: { ...config.resultsEntered, group: true }
-    });
-  }
-  function loadMock() {
-    setSel(new Set(MOCK_QUALIFIERS));
-  }
-  return /* @__PURE__ */ React.createElement(Card, null, /* @__PURE__ */ React.createElement("div", { style: { fontWeight: 800, marginBottom: 6 } }, "Group Stage \u2014 qualifying 32"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: C.muted, marginBottom: 8 } }, "Select the 32 teams that advanced (", sel.size, " selected).", config.resultsEntered.group && /* @__PURE__ */ React.createElement("span", { style: { color: C.green } }, " \u2713 entered")), IS_TRIAL && /* @__PURE__ */ React.createElement(Btn, { variant: "ghost", onClick: loadMock, style: { marginBottom: 8 } }, "Load mock qualifiers"), /* @__PURE__ */ React.createElement("div", { style: { maxHeight: 220, overflowY: "auto", border: `1px solid ${C.line}`, borderRadius: 8, padding: 6 } }, sorted.map((t) => /* @__PURE__ */ React.createElement("label", { key: t.name, style: { display: "flex", gap: 8, padding: "4px 4px", fontSize: 13, cursor: "pointer" } }, /* @__PURE__ */ React.createElement("input", { type: "checkbox", checked: sel.has(t.name), onChange: () => toggle(t.name) }), /* @__PURE__ */ React.createElement("span", null, t.name), /* @__PURE__ */ React.createElement("span", { style: { color: C.muted, marginLeft: "auto" } }, "T", t.tier)))), /* @__PURE__ */ React.createElement(Btn, { onClick: save, disabled: sel.size !== 32, style: { width: "100%", marginTop: 8 } }, sel.size === 32 ? "Save qualifiers & score group stage" : `Need exactly 32 (have ${sel.size})`));
-}
-function KnockoutResults({ round, config, onSaveConfig }) {
-  const fixtures = config.fixtures[round] || [];
-  const [winners, setWinners] = useState(
-    Object.fromEntries(fixtures.map((m) => [m.id, m.winner || null]))
-  );
-  useEffect(() => {
-    setWinners(Object.fromEntries((config.fixtures[round] || []).map((m) => [m.id, m.winner || null])));
-  }, [config.fixtures[round]]);
-  if (fixtures.length === 0) {
-    return /* @__PURE__ */ React.createElement(Card, null, /* @__PURE__ */ React.createElement("div", { style: { fontWeight: 800 } }, STAGE_LABELS[round]), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: C.muted } }, "No fixtures yet. Build/confirm this round's bracket first (Bracket tab)."));
-  }
-  function pick(id, team) {
-    setWinners((w) => ({ ...w, [id]: team }));
-  }
-  function loadMock() {
-    const w = {};
-    fixtures.forEach((m) => {
-      w[m.id] = betterTeam(m.teamA, m.teamB);
-    });
-    setWinners(w);
-  }
-  function save() {
-    const newFixtures = fixtures.map((m) => ({ ...m, winner: winners[m.id] || null }));
-    onSaveConfig({
-      ...config,
-      fixtures: { ...config.fixtures, [round]: newFixtures },
-      resultsEntered: { ...config.resultsEntered, [round]: true }
-    });
-  }
-  const allPicked = fixtures.every((m) => winners[m.id]);
-  return /* @__PURE__ */ React.createElement(Card, null, /* @__PURE__ */ React.createElement("div", { style: { fontWeight: 800, marginBottom: 4 } }, STAGE_LABELS[round], " \u2014 winners", config.resultsEntered[round] && /* @__PURE__ */ React.createElement("span", { style: { color: C.green } }, " \u2713")), IS_TRIAL && /* @__PURE__ */ React.createElement(Btn, { variant: "ghost", onClick: loadMock, style: { marginBottom: 8 } }, "Load mock winners"), fixtures.map((m, i) => /* @__PURE__ */ React.createElement("div", { key: m.id, style: { marginBottom: 8 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted } }, "Match ", i + 1), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 6 } }, [m.teamA, m.teamB].map((team) => /* @__PURE__ */ React.createElement(
-    Btn,
-    {
-      key: team,
-      variant: winners[m.id] === team ? "gold" : "dark",
-      onClick: () => pick(m.id, team),
-      style: { flex: 1, fontSize: 13, padding: "9px" }
-    },
-    team
-  ))))), /* @__PURE__ */ React.createElement(Btn, { onClick: save, disabled: !allPicked, style: { width: "100%", marginTop: 6 } }, allPicked ? "Save results & score round" : "Pick all winners first"));
-}
-function AdminBracket({ config, onSaveConfig }) {
-  return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(R32Builder, { config, onSaveConfig }), ["r16", "qf", "sf", "final", "third"].map((rd) => /* @__PURE__ */ React.createElement(BracketRound, { key: rd, round: rd, config, onSaveConfig })));
-}
-function R32Builder({ config, onSaveConfig }) {
-  const pool = config.groupQualifiers && config.groupQualifiers.length === 32 ? [...config.groupQualifiers].sort() : TEAMS.map((t) => t.name);
-  const existing = config.fixtures.r32 || [];
-  const [matches, setMatches] = useState(
-    existing.length === 16 ? existing.map((m) => [m.teamA, m.teamB]) : Array.from({ length: 16 }, () => ["", ""])
-  );
-  function setSlot(i, side, val) {
-    setMatches((ms) => ms.map((m, idx) => idx === i ? side === 0 ? [val, m[1]] : [m[0], val] : m));
-  }
-  function autoFill() {
-    const list = config.groupQualifiers && config.groupQualifiers.length === 32 ? config.groupQualifiers : MOCK_QUALIFIERS;
-    const ms = [];
-    for (let i = 0; i < 16; i++) ms.push([list[i * 2], list[i * 2 + 1]]);
-    setMatches(ms);
-  }
-  function save(confirm) {
-    const fixtures = matches.map((m, i) => ({ id: "r32_" + i, teamA: m[0], teamB: m[1], winner: null }));
-    onSaveConfig({
-      ...config,
-      fixtures: { ...config.fixtures, r32: fixtures },
-      confirmed: { ...config.confirmed, r32: confirm ? true : config.confirmed.r32 }
-    });
-  }
-  const complete = matches.every((m) => m[0] && m[1]);
-  return /* @__PURE__ */ React.createElement(Card, null, /* @__PURE__ */ React.createElement("div", { style: { fontWeight: 800 } }, "Round of 32 \u2014 build bracket", config.confirmed.r32 && /* @__PURE__ */ React.createElement("span", { style: { color: C.green } }, " \u2713 confirmed")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: C.muted, margin: "4px 0 8px" } }, "Pair the 32 qualifiers into 16 matches, then confirm to make visible to players."), /* @__PURE__ */ React.createElement(Btn, { variant: "ghost", onClick: autoFill, style: { marginBottom: 8 } }, "Auto-fill from qualifiers"), matches.map((m, i) => /* @__PURE__ */ React.createElement("div", { key: i, style: { display: "flex", gap: 5, marginBottom: 5, alignItems: "center" } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, color: C.muted, width: 18 } }, i + 1), [0, 1].map((side) => /* @__PURE__ */ React.createElement(
-    "select",
-    {
-      key: side,
-      value: m[side],
-      onChange: (e2) => setSlot(i, side, e2.target.value),
-      style: selStyle
-    },
-    /* @__PURE__ */ React.createElement("option", { value: "" }, "\u2014"),
-    pool.map((t) => /* @__PURE__ */ React.createElement("option", { key: t, value: t }, t))
-  )))), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 6, marginTop: 8 } }, /* @__PURE__ */ React.createElement(Btn, { variant: "dark", onClick: () => save(false), style: { flex: 1 } }, "Save draft"), /* @__PURE__ */ React.createElement(Btn, { variant: "primary", onClick: () => save(true), disabled: !complete, style: { flex: 1 } }, "Confirm bracket")));
-}
-const selStyle = {
-  flex: 1,
-  padding: "7px",
-  borderRadius: 7,
-  border: `1px solid ${C.line}`,
-  background: C.navy,
-  color: C.white,
-  fontSize: 12,
-  fontFamily: FONT,
-  minWidth: 0
-};
-function BracketRound({ round, config, onSaveConfig }) {
-  const prevMap = { r16: "r32", qf: "r16", sf: "qf", final: "sf", third: "sf" };
-  const prev = prevMap[round];
-  const prevDone = config.resultsEntered[prev];
-  const prevFx = config.fixtures[prev] || [];
-  const matchCount = ROUND_MATCHES[round];
-  const pool = round === "third" ? prevFx.map((m) => m.winner ? m.winner === m.teamA ? m.teamB : m.teamA : "").filter(Boolean) : prevFx.map((m) => m.winner).filter(Boolean);
-  const existing = config.fixtures[round] || [];
-  const [matches, setMatches] = useState(
-    existing.length === matchCount ? existing.map((m) => [m.teamA, m.teamB]) : Array.from({ length: matchCount }, () => ["", ""])
-  );
-  useEffect(() => {
-    const ex = config.fixtures[round] || [];
-    if (ex.length === matchCount) setMatches(ex.map((m) => [m.teamA, m.teamB]));
-  }, [config.fixtures[round]]);
-  function setSlot(i, side, val) {
-    setMatches((ms) => ms.map((m, idx) => idx === i ? side === 0 ? [val, m[1]] : [m[0], val] : m));
-  }
-  function autoPair() {
-    const ms = [];
-    for (let i = 0; i < matchCount; i++) ms.push([pool[i * 2] || "", pool[i * 2 + 1] || ""]);
-    setMatches(ms);
-  }
-  function save(confirm) {
-    const fixtures = matches.map((m, i) => {
-      const old = existing[i];
-      const keepWinner = old && old.teamA === m[0] && old.teamB === m[1] ? old.winner : null;
-      return { id: round + "_" + i, teamA: m[0], teamB: m[1], winner: keepWinner };
-    });
-    onSaveConfig({
-      ...config,
-      fixtures: { ...config.fixtures, [round]: fixtures },
-      confirmed: { ...config.confirmed, [round]: confirm ? true : config.confirmed[round] }
-    });
-  }
-  const placed = matches.flat().filter(Boolean);
-  const unique = new Set(placed).size === placed.length;
-  const filled = matches.every((m) => m[0] && m[1]);
-  const complete = filled && unique;
-  return /* @__PURE__ */ React.createElement(Card, null, /* @__PURE__ */ React.createElement("div", { style: { fontWeight: 800 } }, STAGE_LABELS[round], " \u2014 build bracket", config.confirmed[round] && /* @__PURE__ */ React.createElement("span", { style: { color: C.green } }, " \u2713 confirmed")), !prevDone ? /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: C.muted, marginTop: 4 } }, "Enter ", STAGE_LABELS[prev], " results first \u2014 this round's teams come from those winners.") : /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: C.muted, margin: "4px 0 8px" } }, round === "third" ? "Place the two semi-final losers into the 3rd place match." : `Set the ${matchCount} ${matchCount > 1 ? "matches" : "match"} for this round using the ${STAGE_LABELS[prev]} winners.`), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.muted, marginBottom: 8 } }, "Available: ", pool.length ? pool.join(", ") : "none yet"), /* @__PURE__ */ React.createElement(Btn, { variant: "ghost", onClick: autoPair, style: { marginBottom: 8 } }, "Auto-pair winners in order"), matches.map((m, i) => /* @__PURE__ */ React.createElement("div", { key: i, style: { display: "flex", gap: 5, marginBottom: 5, alignItems: "center" } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, color: C.muted, width: 18 } }, i + 1), [0, 1].map((side) => /* @__PURE__ */ React.createElement("select", { key: side, value: m[side], onChange: (e2) => setSlot(i, side, e2.target.value), style: selStyle }, /* @__PURE__ */ React.createElement("option", { value: "" }, "\u2014"), pool.map((t) => /* @__PURE__ */ React.createElement("option", { key: t, value: t }, t)))))), !unique && placed.length > 0 && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: C.red, marginTop: 4 } }, "A team is used in more than one slot."), /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 6, marginTop: 8 } }, /* @__PURE__ */ React.createElement(Btn, { variant: "dark", onClick: () => save(false), style: { flex: 1 } }, "Save draft"), /* @__PURE__ */ React.createElement(Btn, { variant: "primary", onClick: () => save(true), disabled: !complete, style: { flex: 1 } }, "Confirm bracket"))));
-}
-function AdminOverride({ config, players, onSaveConfig }) {
-  const [pk, setPk] = useState("");
-  const [stage, setStage] = useState("group");
-  const [delta, setDelta] = useState("");
-  function apply() {
-    if (!pk || delta === "") return;
-    const d = parseInt(delta, 10);
-    if (isNaN(d)) return;
-    const overrides = { ...config.overrides || {} };
-    overrides[pk] = { ...overrides[pk] || {}, [stage]: d };
-    onSaveConfig({ ...config, overrides });
-    setDelta("");
-  }
-  function clearOne(key, st) {
-    const overrides = { ...config.overrides || {} };
-    if (overrides[key]) {
-      delete overrides[key][st];
-      if (Object.keys(overrides[key]).length === 0) delete overrides[key];
-    }
-    onSaveConfig({ ...config, overrides });
-  }
-  return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(Card, null, /* @__PURE__ */ React.createElement("div", { style: { fontWeight: 800, marginBottom: 8 } }, "Points adjustment"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: C.muted, marginBottom: 8 } }, "Adds a +/- correction to a player's points for one stage (use if a result was entered wrong)."), /* @__PURE__ */ React.createElement("select", { value: pk, onChange: (e2) => setPk(e2.target.value), style: { ...selStyle, width: "100%", marginBottom: 8 } }, /* @__PURE__ */ React.createElement("option", { value: "" }, "Select player\u2026"), players.map((p) => /* @__PURE__ */ React.createElement("option", { key: p.key, value: p.key }, p.name))), /* @__PURE__ */ React.createElement("select", { value: stage, onChange: (e2) => setStage(e2.target.value), style: { ...selStyle, width: "100%", marginBottom: 8 } }, ALL_STAGES.map((s) => /* @__PURE__ */ React.createElement("option", { key: s, value: s }, STAGE_LABELS[s]))), /* @__PURE__ */ React.createElement(
-    "input",
-    {
-      value: delta,
-      onChange: (e2) => setDelta(e2.target.value),
-      placeholder: "Adjustment e.g. -2 or 5",
-      style: inputStyle
-    }
-  ), /* @__PURE__ */ React.createElement(Btn, { onClick: apply, style: { width: "100%", marginTop: 8 } }, "Apply adjustment")), /* @__PURE__ */ React.createElement(Card, null, /* @__PURE__ */ React.createElement("div", { style: { fontWeight: 800, marginBottom: 8 } }, "Active adjustments"), Object.keys(config.overrides || {}).length === 0 && /* @__PURE__ */ React.createElement("div", { style: { color: C.muted, fontSize: 13 } }, "None."), Object.entries(config.overrides || {}).map(
-    ([key, stages]) => Object.entries(stages).map(([st, d]) => /* @__PURE__ */ React.createElement("div", { key: key + st, style: { display: "flex", justifyContent: "space-between", padding: "6px 0", fontSize: 13, borderBottom: `1px solid ${C.line}` } }, /* @__PURE__ */ React.createElement("span", null, (players.find((p) => p.key === key) || {}).name || key, " \xB7 ", STAGE_LABELS[st]), /* @__PURE__ */ React.createElement("span", null, /* @__PURE__ */ React.createElement("b", { style: { color: d >= 0 ? C.green : C.red } }, d >= 0 ? "+" : "", d), /* @__PURE__ */ React.createElement("button", { onClick: () => clearOne(key, st), style: { marginLeft: 10, background: "none", border: "none", color: C.red, cursor: "pointer", fontFamily: FONT } }, "\u2715"))))
-  )));
-}
-function AdminPlayers({ players, config }) {
-  const ranked = rankPlayers(players, config);
-  return /* @__PURE__ */ React.createElement(Card, null, /* @__PURE__ */ React.createElement("div", { style: { fontWeight: 800, marginBottom: 8 } }, "Registered players (", players.length, ")"), players.length === 0 && /* @__PURE__ */ React.createElement("div", { style: { color: C.muted, fontSize: 13 } }, "None yet."), ranked.map(({ player, score }) => /* @__PURE__ */ React.createElement("div", { key: player.key, style: { display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: `1px solid ${C.line}`, fontSize: 14 } }, /* @__PURE__ */ React.createElement("span", { style: { fontWeight: 600 } }, player.name), /* @__PURE__ */ React.createElement("span", { style: { color: C.gold, fontWeight: 800 } }, score.total, " pts"))));
-}
-function AdminDanger({ players, onSaveConfig }) {
-  const [confirm, setConfirm] = useState(false);
-  async function reset() {
-    await fbResetAll();
-    onSaveConfig(defaultConfig());
-    setConfirm(false);
-    window.location.reload();
-  }
-  return /* @__PURE__ */ React.createElement(Card, { style: { borderColor: C.red } }, /* @__PURE__ */ React.createElement("div", { style: { fontWeight: 800, color: C.red, marginBottom: 6 } }, "Reset all ", IS_TRIAL ? "trial" : "live", " data"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12, color: C.muted, marginBottom: 10 } }, "Permanently clears every player, pick, result and bracket for this ", IS_TRIAL ? "trial" : "live", " game."), !confirm ? /* @__PURE__ */ React.createElement(Btn, { variant: "dark", onClick: () => setConfirm(true) }, "Reset\u2026") : /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 6 } }, /* @__PURE__ */ React.createElement(Btn, { variant: "primary", onClick: reset, style: { flex: 1 } }, "Yes, wipe everything"), /* @__PURE__ */ React.createElement(Btn, { variant: "ghost", onClick: () => setConfirm(false), style: { flex: 1 } }, "Cancel")));
-}
--e;
-ReactDOM.createRoot(document.getElementById("root")).render(/* @__PURE__ */ React.createElement(App, null));
+</div>
 
-  </script>
+<!-- APP -->
+<div id="appView" class="hidden">
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div>
+        <div class="logo">GENESIS <span class="y">WC</span></div>
+        <div class="sub">2026 League </div>
+      </div>
+      <div class="topbar-right">
+        <div class="whoami"><span class="muted">Playing as</span><b id="waName">—</b></div>
+        <button class="icon-btn" id="logoutBtn" title="Sign out">⎋</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="wrap">
+    <div id="page-home"></div>
+    <div id="page-picks" class="hidden"></div>
+    <div id="page-leaderboard" class="hidden"></div>
+    <div id="page-predictions" class="hidden"></div>
+    <div id="page-admin" class="hidden"></div>
+  </div>
+
+  <nav class="tabbar" id="tabbar">
+    <button data-page="home" class="active"><span class="ic">🏠</span>Home</button>
+    <button data-page="picks"><span class="ic">🎯</span>My Picks</button>
+    <button data-page="leaderboard"><span class="ic">🏅</span>Ranks</button>
+    <button data-page="predictions"><span class="ic">👁</span>Everyone</button>
+    <button data-page="admin" id="adminTab"><span class="ic">⚙️</span>Admin</button>
+  </nav>
+</div>
+
+<div id="toast" class="toast"></div>
+<div id="modalRoot"></div>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
+<script>
+/* =========================================================================
+   GENESIS WORLD CUP 2026 —  build
+   Plain vanilla JS. No frameworks. Firebase Realtime DB for shared storage.
+   ========================================================================= */
+
+var MODE = "live";          // "live" or "trial"
+var PREFIX = "wc26_live";       // wc26_live or wc26_trial
+
+var firebaseConfig = {
+  apiKey: "AIzaSyCbBo8Tgv3wp5pGWZWoCpxnkvVTPsJp05U",
+  authDomain: "genesis-world-cup.firebaseapp.com",
+  databaseURL: "https://genesis-world-cup-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "genesis-world-cup",
+  storageBucket: "genesis-world-cup.firebasestorage.app",
+  messagingSenderId: "872426143339",
+  appId: "1:872426143339:web:330745b297e1be849e7b2e"
+};
+
+var TEAMS = [{"name": "Algeria", "rank": 28, "tier": 1, "tierPts": 1, "prevWinner": false}, {"name": "Argentina", "rank": 3, "tier": 1, "tierPts": 1, "prevWinner": true}, {"name": "Australia", "rank": 27, "tier": 1, "tierPts": 1, "prevWinner": false}, {"name": "Austria", "rank": 23, "tier": 1, "tierPts": 1, "prevWinner": false}, {"name": "Belgium", "rank": 9, "tier": 1, "tierPts": 1, "prevWinner": false}, {"name": "Bosnia and Herzegovina", "rank": 64, "tier": 2, "tierPts": 2, "prevWinner": false}, {"name": "Brazil", "rank": 6, "tier": 1, "tierPts": 1, "prevWinner": true}, {"name": "Cabo Verde", "rank": 68, "tier": 2, "tierPts": 2, "prevWinner": false}, {"name": "Canada", "rank": 30, "tier": 1, "tierPts": 1, "prevWinner": false}, {"name": "Colombia", "rank": 13, "tier": 1, "tierPts": 1, "prevWinner": false}, {"name": "Congo DR", "rank": 133, "tier": 3, "tierPts": 3, "prevWinner": false}, {"name": "Cote d'Ivoire", "rank": 34, "tier": 2, "tierPts": 2, "prevWinner": false}, {"name": "Croatia", "rank": 11, "tier": 1, "tierPts": 1, "prevWinner": false}, {"name": "Curacao", "rank": 83, "tier": 3, "tierPts": 3, "prevWinner": false}, {"name": "Czechia", "rank": 41, "tier": 2, "tierPts": 2, "prevWinner": false}, {"name": "Ecuador", "rank": 24, "tier": 1, "tierPts": 1, "prevWinner": false}, {"name": "Egypt", "rank": 29, "tier": 1, "tierPts": 1, "prevWinner": false}, {"name": "England", "rank": 4, "tier": 1, "tierPts": 1, "prevWinner": true}, {"name": "France", "rank": 1, "tier": 1, "tierPts": 1, "prevWinner": true}, {"name": "Germany", "rank": 10, "tier": 1, "tierPts": 1, "prevWinner": true}, {"name": "Ghana", "rank": 73, "tier": 2, "tierPts": 2, "prevWinner": false}, {"name": "Haiti", "rank": 82, "tier": 3, "tierPts": 3, "prevWinner": false}, {"name": "Iraq", "rank": 57, "tier": 2, "tierPts": 2, "prevWinner": false}, {"name": "Iran", "rank": 21, "tier": 1, "tierPts": 1, "prevWinner": false}, {"name": "Japan", "rank": 18, "tier": 1, "tierPts": 1, "prevWinner": false}, {"name": "Jordan", "rank": 63, "tier": 2, "tierPts": 2, "prevWinner": false}, {"name": "Mexico", "rank": 15, "tier": 1, "tierPts": 1, "prevWinner": false}, {"name": "Morocco", "rank": 7, "tier": 1, "tierPts": 1, "prevWinner": false}, {"name": "Netherlands", "rank": 8, "tier": 1, "tierPts": 1, "prevWinner": false}, {"name": "New Zealand", "rank": 85, "tier": 3, "tierPts": 3, "prevWinner": false}, {"name": "Norway", "rank": 31, "tier": 2, "tierPts": 2, "prevWinner": false}, {"name": "Panama", "rank": 33, "tier": 2, "tierPts": 2, "prevWinner": false}, {"name": "Paraguay", "rank": 40, "tier": 2, "tierPts": 2, "prevWinner": false}, {"name": "Portugal", "rank": 5, "tier": 1, "tierPts": 1, "prevWinner": false}, {"name": "Qatar", "rank": 55, "tier": 2, "tierPts": 2, "prevWinner": false}, {"name": "Saudi Arabia", "rank": 61, "tier": 2, "tierPts": 2, "prevWinner": false}, {"name": "Scotland", "rank": 43, "tier": 2, "tierPts": 2, "prevWinner": false}, {"name": "Senegal", "rank": 14, "tier": 1, "tierPts": 1, "prevWinner": false}, {"name": "South Africa", "rank": 60, "tier": 2, "tierPts": 2, "prevWinner": false}, {"name": "South Korea", "rank": 25, "tier": 1, "tierPts": 1, "prevWinner": false}, {"name": "Spain", "rank": 2, "tier": 1, "tierPts": 1, "prevWinner": true}, {"name": "Sweden", "rank": 38, "tier": 2, "tierPts": 2, "prevWinner": false}, {"name": "Switzerland", "rank": 19, "tier": 1, "tierPts": 1, "prevWinner": false}, {"name": "Tunisia", "rank": 46, "tier": 2, "tierPts": 2, "prevWinner": false}, {"name": "Turkey", "rank": 22, "tier": 1, "tierPts": 1, "prevWinner": false}, {"name": "Uruguay", "rank": 17, "tier": 1, "tierPts": 1, "prevWinner": true}, {"name": "USA", "rank": 16, "tier": 1, "tierPts": 1, "prevWinner": false}, {"name": "Uzbekistan", "rank": 50, "tier": 2, "tierPts": 2, "prevWinner": false}];
+var DEADLINES = {"champion": "2026-06-12T02:00:00+08:00", "group": "2026-06-12T02:00:00+08:00", "r32": "2026-06-29T02:00:00+08:00", "r16": "2026-07-05T00:00:00+08:00", "qf": "2026-07-10T03:00:00+08:00", "sf": "2026-07-15T02:00:00+08:00", "third": "2026-07-19T04:00:00+08:00", "final": "2026-07-20T02:00:00+08:00"};   // ISO strings (SGT). In trial, used only for labels.
+var ADMIN_PIN = "2026";
+
+/* Stage definitions, in order. Each knockout stage lists how many matches. */
+var STAGES = [
+  {key:"champion", name:"Champion Pick",  short:"Champion", kind:"champion"},
+  {key:"group",    name:"Group Stage (Pick 32)", short:"Group Stage", kind:"group"},
+  {key:"r32",      name:"Round of 32",    short:"R32", kind:"ko", matches:16, pts:2},
+  {key:"r16",      name:"Round of 16",    short:"R16", kind:"ko", matches:8,  pts:4},
+  {key:"qf",       name:"Quarter-Finals", short:"QF",  kind:"ko", matches:4,  pts:7},
+  {key:"sf",       name:"Semi-Finals",    short:"SF",  kind:"ko", matches:2,  pts:12},
+  {key:"third",    name:"3rd Place Match",short:"3rd", kind:"ko", matches:1,  pts:15},
+  {key:"final",    name:"Final",          short:"Final",kind:"ko",matches:1,  pts:25}
+];
+var KO_KEYS = ["r32","r16","qf","sf","third","final"];
+
+/* ---- Firebase init ---- */
+var app, db;
+try {
+  app = firebase.initializeApp(firebaseConfig);
+  db = firebase.database();
+} catch(e){ console.error("Firebase init failed", e); }
+
+function ref(path){ return db.ref(PREFIX + "/" + path); }
+
+/* ---- Local state ---- */
+var state = {
+  user: null,           // player name (lowercased key) or "__admin__"
+  displayName: null,
+  isAdmin: false,
+  page: "home",
+  players: {},          // name -> {display, champion, group:[], ko:{r32:{...}}, override:{stage:pts}}
+  results: {            // entered by admin
+    group: [],          // array of qualified team names (32)
+    ko: {}              // stage -> { matchIndex -> winnerTeam }
+  },
+  bracket: {},          // stage -> { confirmed:bool, matches:[ [teamA,teamB], ... ] }
+  locks: {},            // trial: stage -> bool ; live: computed from deadlines but admin can override
+  loaded:false
+};
+
+/* ---- Utilities ---- */
+function nkey(name){ return name.trim().toLowerCase().replace(/[.#$\[\]\/]/g,"_"); }
+function esc(s){ return (s==null?"":String(s)).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+function teamByName(n){ for(var i=0;i<TEAMS.length;i++) if(TEAMS[i].name===n) return TEAMS[i]; return null; }
+function toast(msg, isErr){
+  var t=document.getElementById('toast');
+  t.textContent=msg; t.className='toast show'+(isErr?' err':'');
+  clearTimeout(t._t); t._t=setTimeout(function(){ t.className='toast'+(isErr?' err':''); },2600);
+}
+function byId(id){ return document.getElementById(id); }
+
+/* Deadline / lock logic.
+   LIVE: a stage is locked when now >= deadline, UNLESS admin set an explicit unlock.
+   TRIAL: a stage is locked only when admin toggled it locked. */
+function deadlineDate(key){ return new Date(DEADLINES[key]); }
+function isLocked(key){
+  if(MODE==="trial"){ return !!state.locks[key]; }
+  // live
+  if(state.locks[key]==="unlocked") return false;   // admin reopened
+  if(state.locks[key]==="locked") return true;       // admin force-locked
+  return Date.now() >= deadlineDate(key).getTime();
+}
+function lockReasonLabel(key){
+  if(MODE==="trial") return state.locks[key]?"Locked by admin":"Open";
+  if(state.locks[key]==="unlocked") return "Reopened by admin";
+  return isLocked(key)?"Closed":"Open";
+}
+
+/* ===================== DATA BINDING ===================== */
+function bindData(){
+  ref("players").on("value", function(s){ state.players = s.val()||{}; onData(); });
+  ref("results").on("value", function(s){ var v=s.val()||{}; state.results={group:v.group||[], ko:v.ko||{}}; onData(); });
+  ref("bracket").on("value", function(s){ state.bracket = s.val()||{}; onData(); });
+  ref("locks").on("value",   function(s){ state.locks   = s.val()||{}; onData(); });
+}
+var _dataTimer=null;
+function onData(){
+  state.loaded=true;
+  clearTimeout(_dataTimer);
+  _dataTimer=setTimeout(render, 30); // debounce multi-listener bursts
+}
+
+/* ===================== SCORING ===================== */
+function playerObj(key){ return state.players[key]||{}; }
+
+function championPoints(p){
+  if(!p.champion) return 0;
+  var res = state.results; if(!res.group) return 0;
+  // champion correct only known once Final winner entered
+  var finalWinner = (res.ko.final && res.ko.final["0"]) || null;
+  if(!finalWinner || p.champion!==finalWinner) return 0;
+  var t=teamByName(p.champion);
+  if(!t) return 0;
+  return t.prevWinner?25:75;
+}
+function groupPoints(p){
+  if(!p.group||!state.results.group||!state.results.group.length) return 0;
+  var qualified={}; state.results.group.forEach(function(n){qualified[n]=1;});
+  var pts=0;
+  p.group.forEach(function(n){
+    if(qualified[n]){ var t=teamByName(n); if(t) pts+=t.tierPts; }
+  });
+  return pts;
+}
+function koStagePoints(p,key){
+  var stage=STAGES.filter(function(s){return s.key===key;})[0];
+  var picks=(p.ko&&p.ko[key])||{};
+  var res=(state.results.ko&&state.results.ko[key])||{};
+  var pts=0;
+  Object.keys(res).forEach(function(mi){
+    if(picks[mi] && picks[mi]===res[mi]) pts+=stage.pts;
+  });
+  return pts;
+}
+function stagePoints(p,key){
+  if(key==="champion") return championPoints(p);
+  if(key==="group") return groupPoints(p);
+  return koStagePoints(p,key);
+}
+function overrideFor(p,key){ return (p.override&&typeof p.override[key]==="number")?p.override[key]:0; }
+function totalPoints(key){
+  var p=playerObj(key); var tot=0;
+  STAGES.forEach(function(s){ tot+=stagePoints(p,s.key)+overrideFor(p,s.key); });
+  return tot;
+}
+
+/* Tiebreaker metrics. Higher is better for each, applied in order. */
+function tiebreak(key){
+  var p=playerObj(key); var res=state.results;
+  var finalWinner=(res.ko.final&&res.ko.final["0"])||null;
+  // 1: predicted champion (their final winner pick) correct
+  var finalPick=(p.ko&&p.ko.final&&p.ko.final["0"])||null;
+  var champCorrect=(finalWinner&&finalPick===finalWinner)?1:0;
+  // finalists: teams in the actual Final = the two teams in bracket.final matches
+  var actualFinalists=bracketTeams("final");
+  var myFinalPicks=koPickTeams(p,"sf"); // SF winners they picked = their predicted finalists
+  var bothFinalists = (actualFinalists.length===2 &&
+        myFinalPicks.indexOf(actualFinalists[0])>=0 &&
+        myFinalPicks.indexOf(actualFinalists[1])>=0)?1:0;
+  // semifinalists: actual semifinalists = teams in bracket.sf
+  var actualSemi=bracketTeams("sf");
+  var mySemiPicks=koPickTeams(p,"qf");
+  var semiCount=countIntersect(mySemiPicks,actualSemi);
+  // quarterfinalists: actual QF teams = bracket.qf
+  var actualQF=bracketTeams("qf");
+  var myQFPicks=koPickTeams(p,"r16");
+  var qfCount=countIntersect(myQFPicks,actualQF);
+  return [champCorrect,bothFinalists,semiCount,qfCount];
+}
+function bracketTeams(key){
+  var b=state.bracket[key]; if(!b||!b.matches) return [];
+  var out=[]; b.matches.forEach(function(m){ if(m[0])out.push(m[0]); if(m[1])out.push(m[1]); });
+  return out;
+}
+function koPickTeams(p,key){
+  var picks=(p.ko&&p.ko[key])||{}; var out=[];
+  Object.keys(picks).forEach(function(mi){ if(picks[mi]) out.push(picks[mi]); });
+  return out;
+}
+function countIntersect(a,b){ var s={}; b.forEach(function(x){s[x]=1;}); var c=0; a.forEach(function(x){if(s[x])c++;}); return c; }
+
+function leaderboard(){
+  var rows=Object.keys(state.players).map(function(k){
+    var p=state.players[k];
+    return {key:k, display:p.display||k, total:totalPoints(k), tb:tiebreak(k)};
+  });
+  rows.sort(function(a,b){
+    if(b.total!==a.total) return b.total-a.total;
+    for(var i=0;i<a.tb.length;i++){ if(b.tb[i]!==a.tb[i]) return b.tb[i]-a.tb[i]; }
+    return a.display.localeCompare(b.display);
+  });
+  // assign ranks with ties
+  var rank=0,prevSig=null,seen=0;
+  rows.forEach(function(r){
+    seen++;
+    var sig=r.total+"|"+r.tb.join(",");
+    if(sig!==prevSig){ rank=seen; prevSig=sig; }
+    r.rank=rank;
+  });
+  return rows;
+}
+
+/* ===================== RENDER ===================== */
+function render(){
+  if(!state.user) return;
+  byId('waName').textContent = state.displayName || (state.isAdmin?"Admin":"—");
+  byId('adminTab').style.display = state.isAdmin ? "" : "none";
+  // page visibility
+  ["home","picks","leaderboard","predictions","admin"].forEach(function(pg){
+    byId('page-'+pg).classList.toggle('hidden', state.page!==pg);
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('#tabbar button'),function(b){
+    b.classList.toggle('active', b.getAttribute('data-page')===state.page);
+  });
+  if(!state.loaded){ byId('page-'+state.page).innerHTML='<div class="spinner"></div>'; return; }
+  if(state.page==="home") renderHome();
+  else if(state.page==="picks") renderPicks();
+  else if(state.page==="leaderboard") renderLeaderboard();
+  else if(state.page==="predictions") renderPredictions();
+  else if(state.page==="admin") renderAdmin();
+}
+
+/* ---------- HOME ---------- */
+function renderHome(){
+  var el=byId('page-home');
+  if(state.isAdmin && !state.displayName){
+    el.innerHTML='<div class="card fade-in"><h2>Admin mode</h2><p class="muted" style="margin-top:6px">You are signed in as organiser. Use the Admin tab to manage the tournament. To also play, sign out and log in with your name.</p></div>';
+    return;
+  }
+  var key=state.user;
+  var lb=leaderboard();
+  var myrow=lb.filter(function(r){return r.key===key;})[0];
+  var rank=myrow?myrow.rank:"-";
+  var html='<div class="stagger">';
+  html+='<div class="scorebig"><div class="lbl">Your Total Score</div><div class="val">'+(myrow?myrow.total:0)+'</div>'
+       +'<div class="rk">Rank <b>#'+rank+'</b> of '+lb.length+' players</div>'
+       + nextCountdownHTML() +'</div>';
+
+  html+='<div class="section-label" style="margin-top:22px">Tournament Stages</div>';
+  STAGES.forEach(function(s,i){
+    var locked=isLocked(s.key);
+    var statusPill;
+    if(s.kind==="ko" && !bracketReady(s.key)){
+      statusPill='<span class="pill done">Bracket soon</span>';
+    } else if(locked){
+      statusPill='<span class="pill locked">🔒 '+lockReasonLabel(s.key)+'</span>';
+    } else {
+      statusPill='<span class="pill open">● Open</span>';
+    }
+    var done=hasSubmitted(playerObj(key),s.key);
+    var sub = MODE==="live" ? fmtDeadline(s.key) : (locked?"Locked":"Open for picks");
+    html+='<div class="stage tap" data-go-picks="'+s.key+'">'
+        +'<div class="num">'+(i+1)+'</div>'
+        +'<div class="info"><div class="t">'+esc(s.name)+(done?' <span style="color:var(--green)">✓</span>':'')+'</div><div class="d">'+sub+'</div></div>'
+        + statusPill
+        +'<div class="chev">›</div></div>';
+  });
+  html+='</div>';
+  el.innerHTML=html;
+  Array.prototype.forEach.call(el.querySelectorAll('[data-go-picks]'),function(n){
+    n.onclick=function(){ openStage(n.getAttribute('data-go-picks')); };
+  });
+  startCountdownTick();
+}
+function fmtDeadline(key){
+  var d=deadlineDate(key);
+  var opts={day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',hour12:true,timeZone:'Asia/Singapore'};
+  try{ return 'Deadline: '+d.toLocaleString('en-GB',opts)+' SGT'; }catch(e){ return 'Deadline set'; }
+}
+function bracketReady(key){
+  if(key==="r32") return true; // first KO round bracket = the 32 qualifiers (admin still must build matches)
+  return false;
+}
+function bracketReady(key){
+  var b=state.bracket[key];
+  return !!(b && b.confirmed && b.matches && b.matches.length);
+}
+function hasSubmitted(p,key){
+  if(key==="champion") return !!p.champion;
+  if(key==="group") return !!(p.group&&p.group.length===32);
+  var picks=(p.ko&&p.ko[key])||{}; var st=STAGES.filter(function(s){return s.key===key;})[0];
+  return st?Object.keys(picks).length>=st.matches:false;
+}
+
+/* ---------- COUNTDOWN (live only) ---------- */
+function nextDeadlineKey(){
+  if(MODE!=="live") return null;
+  var now=Date.now(),best=null;
+  STAGES.forEach(function(s){
+    var t=deadlineDate(s.key).getTime();
+    if(t>now && (best===null || t<deadlineDate(best).getTime())) best=s.key;
+  });
+  return best;
+}
+function nextCountdownHTML(){
+  if(MODE!=="live") return '<div class="note" style="text-align:center;position:relative">Trial mode — stages locked manually by admin</div>';
+  var k=nextDeadlineKey();
+  if(!k) return '<div class="note" style="text-align:center;position:relative">All deadlines passed</div>';
+  var st=STAGES.filter(function(s){return s.key===k;})[0];
+  return '<div class="note" style="text-align:center;position:relative;margin-top:14px">Next deadline · '+esc(st.short)+'</div>'
+        +'<div class="countdown" id="cdBox" data-key="'+k+'"></div>';
+}
+var _cdTimer=null;
+function startCountdownTick(){
+  if(_cdTimer) clearInterval(_cdTimer);
+  function tick(){
+    var box=byId('cdBox'); if(!box){ return; }
+    var k=box.getAttribute('data-key');
+    var diff=deadlineDate(k).getTime()-Date.now();
+    if(diff<0){ box.innerHTML='<div class="cd-unit"><div class="n">0</div><div class="u">Closed</div></div>'; return; }
+    var d=Math.floor(diff/86400000), h=Math.floor(diff%86400000/3600000),
+        m=Math.floor(diff%3600000/60000), s=Math.floor(diff%60000/1000);
+    box.innerHTML=[['Days',d],['Hrs',h],['Min',m],['Sec',s]].map(function(u){
+      return '<div class="cd-unit"><div class="n">'+u[1]+'</div><div class="u">'+u[0]+'</div></div>';
+    }).join('');
+  }
+  tick(); _cdTimer=setInterval(tick,1000);
+}
+
+/* ---------- MY PICKS (stage list landing) ---------- */
+var currentStage=null;
+function renderPicks(){
+  if(currentStage){ renderStageEditor(currentStage); return; }
+  var el=byId('page-picks');
+  var html='<div class="card fade-in"><h2>My Picks</h2><p class="muted" style="margin-top:4px">Choose a stage to make or review your predictions.</p></div>';
+  html+='<div class="stagger">';
+  STAGES.forEach(function(s,i){
+    var locked=isLocked(s.key);
+    var done=hasSubmitted(playerObj(state.user),s.key);
+    var pill = (s.kind==="ko"&&!bracketReady(s.key))?'<span class="pill done">Bracket soon</span>'
+              :(locked?'<span class="pill locked">🔒</span>':'<span class="pill open">● Open</span>');
+    html+='<div class="stage tap" data-stage="'+s.key+'"><div class="num">'+(i+1)+'</div>'
+        +'<div class="info"><div class="t">'+esc(s.name)+(done?' <span style="color:var(--green)">✓</span>':'')+'</div>'
+        +'<div class="d">'+(done?'Submitted':'Not submitted yet')+'</div></div>'+pill+'<div class="chev">›</div></div>';
+  });
+  html+='</div>';
+  el.innerHTML=html;
+  Array.prototype.forEach.call(el.querySelectorAll('[data-stage]'),function(n){
+    n.onclick=function(){ openStage(n.getAttribute('data-stage')); };
+  });
+}
+function openStage(key){
+  state.page="picks"; currentStage=key; render();
+}
+function backToPicks(){ currentStage=null; render(); }
+
+function renderStageEditor(key){
+  var st=STAGES.filter(function(s){return s.key===key;})[0];
+  var el=byId('page-picks');
+  var locked=isLocked(key);
+  var head='<div class="row between" style="margin-top:4px"><button class="btn ghost small" id="backBtn">‹ Stages</button>'
+          +'<span class="pill '+(locked?'locked':'open')+'">'+(locked?'🔒 '+lockReasonLabel(key):'● Open')+'</span></div>'
+          +'<div class="card"><h2>'+esc(st.name)+'</h2><p class="muted" id="stDesc"></p></div>';
+  if(st.kind==="champion") head+=renderChampionEditor(locked);
+  else if(st.kind==="group") head+=renderGroupEditor(locked);
+  else head+=renderKOEditor(key,locked);
+  el.innerHTML=head;
+  byId('backBtn').onclick=backToPicks;
+  wireStageEditor(key,st,locked);
+}
+
+/* ----- Champion editor ----- */
+var draftChampion=null;
+function renderChampionEditor(locked){
+  var p=playerObj(state.user);
+  draftChampion = p.champion||null;
+  byIdSafeDesc("Pick one team you think will win the World Cup. Previous winners earn 25 points, underdogs earn 75 points if correct.");
+  var sorted=TEAMS.slice().sort(function(a,b){return a.name.localeCompare(b.name);});
+  var resultWinner=(state.results.ko.final&&state.results.ko.final["0"])||null;
+  var h='<div class="teamlist stagger">';
+  sorted.forEach(function(t){
+    var sel=(draftChampion===t.name);
+    var cls='team tap'; var res='';
+    if(resultWinner){
+      if(t.name===resultWinner){ cls='team correct'; }
+    }
+    if(sel) cls+=' sel';
+    if(resultWinner && sel){ res = (t.name===resultWinner)?'<span class="res">✅</span>':'<span class="res">❌</span>'; }
+    h+='<div class="'+cls+'" data-champ="'+esc(t.name)+'">'
+      +'<div class="chk">'+(sel?'✓':'')+'</div>'
+      +'<div class="nm">'+esc(t.name)+'</div>'
+      +'<div class="meta">'+(t.prevWinner?'<span class="pill prev">Prev Winner · 25</span>':'<span class="pill under">Underdog · 75</span>')+'</div>'
+      + res +'</div>';
+  });
+  h+='</div>';
+  if(!locked) h+='<div style="margin-top:18px"><button class="btn" id="saveChamp">Save Champion Pick</button></div>';
+  else h+='<p class="note">This stage is locked. Your pick is shown above.</p>';
+  return h;
+}
+function byIdSafeDesc(txt){ setTimeout(function(){ var d=byId('stDesc'); if(d)d.textContent=txt; },0); }
+
+/* ----- Group editor (pick 32) ----- */
+var draftGroup=[];
+var groupFilter="all";
+function renderGroupEditor(locked){
+  var p=playerObj(state.user);
+  draftGroup=(p.group||[]).slice();
+  byIdSafeDesc("Select exactly 32 teams you predict will advance from the group stage. Points per correct pick depend on tier.");
+  var resultSet={}; (state.results.group||[]).forEach(function(n){resultSet[n]=1;});
+  var hasResults=(state.results.group&&state.results.group.length>0);
+  var sorted=TEAMS.slice().sort(function(a,b){
+    if(a.tier!==b.tier) return a.tier-b.tier;
+    return a.name.localeCompare(b.name);
+  });
+  var h='<div class="flt" id="grpFilter">'
+     +'<button data-f="all" class="on">All 48</button>'
+     +'<button data-f="1">Tier 1 · 1pt</button>'
+     +'<button data-f="2">Tier 2 · 2pt</button>'
+     +'<button data-f="3">Tier 3 · 3pt</button></div>';
+  h+='<div class="teamlist" id="grpList">';
+  sorted.forEach(function(t){ h+=groupRow(t,locked,resultSet,hasResults); });
+  h+='</div>';
+  if(!locked){
+    h+='<div class="counter" id="grpCounter"></div>';
+    h+='<div style="margin-top:12px"><button class="btn" id="saveGroup">Save 32 Picks</button></div>';
+  } else {
+    h+='<p class="note">This stage is locked. Your selections are shown above'+(hasResults?', with correct qualifiers highlighted green':'')+'.</p>';
+  }
+  return h;
+}
+function groupRow(t,locked,resultSet,hasResults){
+  var sel=draftGroup.indexOf(t.name)>=0;
+  var cls='team'+(locked?'':' tap');
+  if(hasResults){
+    if(sel && resultSet[t.name]) cls='team correct';
+    else if(sel && !resultSet[t.name]) cls='team wrong';
+    else if(sel) cls+=' sel';
+  } else if(sel) cls+=' sel';
+  var res = hasResults && sel ? (resultSet[t.name]?'<span class="res">✅</span>':'<span class="res">❌</span>') : '';
+  return '<div class="'+cls+'" data-team="'+esc(t.name)+'" data-tier="'+t.tier+'">'
+    +'<div class="chk">'+(sel?'✓':'')+'</div>'
+    +'<div class="rk">'+t.rank+'</div>'
+    +'<div class="nm">'+esc(t.name)+'</div>'
+    +'<div class="meta"><span class="pill t'+t.tier+'">T'+t.tier+' · '+t.tierPts+'pt</span></div>'+res+'</div>';
+}
+function updateGrpCounter(){
+  var c=byId('grpCounter'); if(!c) return;
+  var n=draftGroup.length, bad=(n!==32);
+  c.innerHTML='<div class="counter-inner"><div class="c'+(bad?' bad':'')+'">'+n+'/32</div>'
+    +'<div class="lbl">'+(n<32?('Select '+(32-n)+' more'):(n>32?('Remove '+(n-32)):'Ready to save'))+'</div></div>';
+  var btn=byId('saveGroup'); if(btn) btn.disabled=(n!==32);
+}
+
+/* ----- KO editor ----- */
+var draftKO={};
+function renderKOEditor(key,locked){
+  var st=STAGES.filter(function(s){return s.key===key;})[0];
+  var p=playerObj(state.user);
+  draftKO=JSON.parse(JSON.stringify((p.ko&&p.ko[key])||{}));
+  byIdSafeDesc("Pick the winner of each match. "+st.pts+" points per correct winner.");
+  var b=state.bracket[key];
+  if(!b || !b.confirmed || !b.matches || !b.matches.length){
+    return '<div class="empty">⏳ Next round bracket coming soon.<br><span class="dim">The admin will set the matchups once the previous round is decided.</span></div>';
+  }
+  var res=(state.results.ko&&state.results.ko[key])||{};
+  var h='<div class="stagger">';
+  b.matches.forEach(function(m,idx){
+    var picked=draftKO[idx];
+    var winner=res[idx]||null;
+    h+='<div class="match"><div class="mh">Match '+(idx+1)+'</div>';
+    [0,1].forEach(function(side){
+      var team=m[side];
+      if(!team){ h+='<div class="mteam"><div class="dot"></div><div class="nm dim">TBD</div></div>'; return; }
+      var sel=(picked===team);
+      var cls='mteam'+(locked?'':' tap');
+      var tag='';
+      if(winner){
+        if(team===winner){ cls='mteam winner'; }
+        else { cls+=' lost'; }
+        if(sel && team===winner) { cls+=' pickcorrect'; tag='<span class="tag">✓ your pick</span>'; }
+        else if(sel && team!==winner){ cls+=' pickwrong'; tag='<span class="tag">✗ your pick</span>'; }
+      } else if(sel){ cls+=' sel'; tag='<span class="tag" style="background:rgba(245,197,66,.18);color:var(--gold)">your pick</span>'; }
+      h+='<div class="'+cls+'" data-mi="'+idx+'" data-team="'+esc(team)+'">'
+        +'<div class="dot"></div><div class="nm">'+esc(team)+'</div>'+tag+'</div>';
+    });
+    h+='</div>';
+  });
+  h+='</div>';
+  if(!locked) h+='<div style="margin-top:16px"><button class="btn" id="saveKO" data-key="'+key+'">Save Picks</button></div>';
+  else h+='<p class="note">This stage is locked. Results highlighted once entered by admin.</p>';
+  return h;
+}
+
+function wireStageEditor(key,st,locked){
+  if(st.kind==="champion"){
+    if(!locked){
+      Array.prototype.forEach.call(document.querySelectorAll('[data-champ]'),function(n){
+        n.onclick=function(){ draftChampion=n.getAttribute('data-champ'); renderStageEditor(key); };
+      });
+      var sc=byId('saveChamp'); if(sc) sc.onclick=function(){
+        if(!draftChampion){ toast('Pick a team first',true); return; }
+        saveField('champion',draftChampion,'Champion pick saved!');
+      };
+    }
+  } else if(st.kind==="group"){
+    if(!locked){
+      updateGrpCounter();
+      Array.prototype.forEach.call(document.querySelectorAll('#grpList [data-team]'),function(n){
+        n.onclick=function(){
+          var tn=n.getAttribute('data-team');
+          var i=draftGroup.indexOf(tn);
+          if(i>=0) draftGroup.splice(i,1);
+          else { if(draftGroup.length>=32){ toast('You already have 32. Deselect one first.',true); return;} draftGroup.push(tn); }
+          // re-render just classes
+          var sel=draftGroup.indexOf(tn)>=0;
+          n.classList.toggle('sel',sel);
+          n.querySelector('.chk').textContent=sel?'✓':'';
+          updateGrpCounter();
+        };
+      });
+      Array.prototype.forEach.call(document.querySelectorAll('#grpFilter button'),function(b){
+        b.onclick=function(){
+          groupFilter=b.getAttribute('data-f');
+          Array.prototype.forEach.call(document.querySelectorAll('#grpFilter button'),function(x){x.classList.toggle('on',x===b);});
+          Array.prototype.forEach.call(document.querySelectorAll('#grpList [data-team]'),function(n){
+            var show=(groupFilter==="all"||n.getAttribute('data-tier')===groupFilter);
+            n.style.display=show?'':'none';
+          });
+        };
+      });
+      var sg=byId('saveGroup'); if(sg) sg.onclick=function(){
+        if(draftGroup.length!==32){ toast('Select exactly 32 teams',true); return; }
+        saveField('group',draftGroup,'Your 32 picks are saved!');
+      };
+    }
+  } else {
+    if(!locked){
+      Array.prototype.forEach.call(document.querySelectorAll('#page-picks .mteam[data-team]'),function(n){
+        n.onclick=function(){
+          var mi=n.getAttribute('data-mi'), tn=n.getAttribute('data-team');
+          draftKO[mi]=tn;
+          renderStageEditor(key);
+        };
+      });
+      var sk=byId('saveKO'); if(sk) sk.onclick=function(){
+        var b=state.bracket[key];
+        if(Object.keys(draftKO).length<b.matches.length){ toast('Pick a winner for every match',true); return; }
+        saveKOField(key,draftKO,'Your '+st.short+' picks are saved!');
+      };
+    }
+  }
+}
+
+/* ---------- SAVE ---------- */
+function saveField(field,val,msg){
+  if(!state.user||state.isAdmin&&!state.displayName){ toast('Log in as a player to save',true); return; }
+  var upd={}; upd[field]=val; upd.display=state.displayName;
+  ref("players/"+state.user).update(upd).then(function(){
+    toast(msg||'Saved!');
+  }).catch(function(e){ toast('Save failed: '+e.message,true); });
+}
+function saveKOField(key,obj,msg){
+  var upd={}; upd.display=state.displayName;
+  ref("players/"+state.user+"/ko/"+key).set(obj).then(function(){
+    ref("players/"+state.user+"/display").set(state.displayName);
+    toast(msg||'Saved!');
+  }).catch(function(e){ toast('Save failed: '+e.message,true); });
+}
+
+/* ---------- LEADERBOARD ---------- */
+function renderLeaderboard(){
+  var el=byId('page-leaderboard');
+  var lb=leaderboard();
+  var finalScored=!!(state.results.ko.final&&state.results.ko.final["0"]);
+  var html='<div class="card fade-in"><h2>🏅 Leaderboard</h2><p class="muted" style="margin-top:4px">'+lb.length+' players · live standings</p></div>';
+  if(!lb.length){ el.innerHTML=html+'<div class="empty">No players yet.</div>'; return; }
+  // recent stage = most recently scored stage
+  var recentKey=mostRecentScoredStage();
+  html+='<div class="row between" style="margin-top:14px;padding:0 14px"><span class="section-label" style="margin:0">Player</span>'
+       +'<span class="section-label" style="margin:0">Recent · Total</span></div>';
+  html+='<div class="stagger">';
+  lb.forEach(function(r){
+    var rkCls=r.rank===1?'r1':r.rank===2?'r2':r.rank===3?'r3':'';
+    var me=(r.key===state.user)?' me':'';
+    var medal=r.rank===1?'🥇':r.rank===2?'🥈':r.rank===3?'🥉':r.rank;
+    var p=playerObj(r.key);
+    var recentTxt='—';
+    if(finalScored){
+      var fpts=stagePoints(p,'final')+overrideFor(p,'final');
+      var cpts=championPoints(p);
+      recentTxt=fpts+' + '+cpts+' <span class="dim">(final+champ)</span>';
+    } else if(recentKey){
+      recentTxt=(stagePoints(p,recentKey)+overrideFor(p,recentKey))+' <span class="dim">'+stShort(recentKey)+'</span>';
+    }
+    html+='<div class="lbrow '+rkCls+me+'"><div class="rk">'+medal+'</div>'
+       +'<div class="nm">'+esc(r.display)+(me?' <span class="tb">(you)</span>':'')+'</div>'
+       +'<div class="recent">'+recentTxt+'</div>'
+       +'<div class="tot">'+r.total+'</div></div>';
+  });
+  html+='</div><p class="note">Ties broken by: correct champion, then both finalists, then most semi-finalists, then most quarter-finalists. Remaining ties share the prize.</p>';
+  el.innerHTML=html;
+}
+function stShort(key){ var s=STAGES.filter(function(x){return x.key===key;})[0]; return s?s.short:key; }
+function mostRecentScoredStage(){
+  var order=["group","r32","r16","qf","sf","third","final"];
+  var last=null;
+  order.forEach(function(k){
+    if(k==="group"){ if(state.results.group&&state.results.group.length) last=k; }
+    else if(state.results.ko[k] && Object.keys(state.results.ko[k]).length) last=k;
+  });
+  return last;
+}
+
+/* ---------- EVERYONE'S PREDICTIONS ---------- */
+var openPlayers={};
+function renderPredictions(){
+  var el=byId('page-predictions');
+  var keys=Object.keys(state.players);
+  var html='<div class="card fade-in"><h2>👁 Everyone\u2019s Predictions</h2><p class="muted" style="margin-top:4px">Each stage becomes visible to all once its deadline has passed. Your own picks are always visible.</p></div>';
+  if(!keys.length){ el.innerHTML=html+'<div class="empty">No players yet.</div>'; return; }
+  keys.sort(function(a,b){ return (state.players[a].display||a).localeCompare(state.players[b].display||b); });
+  html+='<div>';
+  keys.forEach(function(k){
+    var p=state.players[k]; var isMe=(k===state.user);
+    var open=openPlayers[k]||isMe;
+    html+='<div class="predplayer"><div class="ph" data-pl="'+esc(k)+'"><div class="nm">'+esc(p.display||k)+(isMe?' <span class="dim">(you)</span>':'')+'</div>'
+        +'<div class="tot" style="font-family:\'Bebas Neue\';font-size:22px;color:var(--gold)">'+totalPoints(k)+'</div>'
+        +'<div class="chev">'+(open?'▾':'▸')+'</div></div>';
+    if(open){ html+='<div class="predbody">'+predBodyFor(k,isMe)+'</div>'; }
+    html+='</div>';
+  });
+  html+='</div>';
+  el.innerHTML=html;
+  Array.prototype.forEach.call(el.querySelectorAll('[data-pl]'),function(n){
+    n.onclick=function(){ var k=n.getAttribute('data-pl'); openPlayers[k]=!(openPlayers[k]||(k===state.user)); renderPredictions(); };
+  });
+}
+function predBodyFor(key,isMe){
+  var p=playerObj(key); var h='';
+  STAGES.forEach(function(s){
+    var visible = isMe || isLocked(s.key);
+    h+='<div class="predstage"><div class="psh">'+esc(s.name)+'</div>';
+    if(!visible){ h+='<div class="lockmsg">🔒 Hidden until deadline passes</div></div>'; return; }
+    if(s.key==="champion"){
+      if(!p.champion){ h+='<div class="lockmsg">No pick</div>'; }
+      else {
+        var rw=(state.results.ko.final&&state.results.ko.final["0"]);
+        var ok=rw&&p.champion===rw;
+        h+='<div class="chips"><span class="chip'+(ok?' correct':'')+'">'+esc(p.champion)+'</span></div>';
+      }
+    } else if(s.key==="group"){
+      var rs={}; (state.results.group||[]).forEach(function(n){rs[n]=1;});
+      if(!p.group||!p.group.length){ h+='<div class="lockmsg">No picks</div>'; }
+      else {
+        h+='<div class="chips">'+p.group.slice().sort().map(function(n){
+          return '<span class="chip'+(rs[n]?' correct':'')+'">'+esc(n)+'</span>';
+        }).join('')+'</div>';
+      }
+    } else {
+      var picks=(p.ko&&p.ko[s.key])||{};
+      var res=(state.results.ko&&state.results.ko[s.key])||{};
+      var arr=Object.keys(picks);
+      if(!arr.length){ h+='<div class="lockmsg">No picks</div>'; }
+      else {
+        h+='<div class="chips">'+arr.sort(function(a,b){return a-b;}).map(function(mi){
+          var ok=res[mi]&&res[mi]===picks[mi];
+          return '<span class="chip'+(ok?' correct':'')+'">'+esc(picks[mi])+'</span>';
+        }).join('')+'</div>';
+      }
+    }
+    h+='</div>';
+  });
+  return h;
+}
+
+/* ===================== ADMIN ===================== */
+var adminOpen={};
+function renderAdmin(){
+  var el=byId('page-admin');
+  if(!state.isAdmin){ el.innerHTML='<div class="empty">Admin access required.</div>'; return; }
+  var html='<div class="card fade-in"><h2>⚙️ Admin Panel</h2><p class="muted" style="margin-top:4px">Manage results, brackets, locks and scoring. Mode: <b>'+MODE.toUpperCase()+'</b></p></div>';
+  html+=adminSection('results','📝 Results: Group Qualifiers');
+  html+=adminSection('bracket','🗂 Bracket Builder');
+  html+=adminSection('koresults','🏆 Results: Knockout Winners');
+  html+=adminSection('override','± Points Override');
+  html+=adminSection('tracker','✅ Submission Tracker');
+  html+=adminSection('locks',(MODE==="trial"?'🔓 Stage Locks (manual)':'🔓 Stage Status & Unlock'));
+  html+=adminSection('danger','⚠️ Reset Data');
+  el.innerHTML=html;
+  wireAdmin();
+}
+function adminSection(id,title){
+  var open=adminOpen[id];
+  return '<div class="adminsec"><div class="ah" data-asec="'+id+'">'+title+'<span>'+(open?'▾':'▸')+'</span></div>'
+    +(open?'<div class="ab" id="ab-'+id+'">'+adminBody(id)+'</div>':'')+'</div>';
+}
+function adminBody(id){
+  if(id==="results") return adminGroupResults();
+  if(id==="bracket") return adminBracket();
+  if(id==="koresults") return adminKOResults();
+  if(id==="override") return adminOverride();
+  if(id==="tracker") return adminTracker();
+  if(id==="locks") return adminLocks();
+  if(id==="danger") return adminDanger();
+  return '';
+}
+
+/* group qualifiers entry: pick 32 teams that advanced */
+var draftQual=[];
+function adminGroupResults(){
+  draftQual=(state.results.group||[]).slice();
+  var sorted=TEAMS.slice().sort(function(a,b){if(a.tier!==b.tier)return a.tier-b.tier;return a.name.localeCompare(b.name);});
+  var h='<p class="muted" style="font-size:13px">Select the 32 teams that advanced from groups. This scores everyone\u2019s group picks.</p>';
+  h+='<div class="teamlist" id="qualList">';
+  sorted.forEach(function(t){
+    var sel=draftQual.indexOf(t.name)>=0;
+    h+='<div class="team'+(sel?' sel':'')+' tap" data-qual="'+esc(t.name)+'"><div class="chk">'+(sel?'✓':'')+'</div>'
+      +'<div class="rk">'+t.rank+'</div><div class="nm">'+esc(t.name)+'</div>'
+      +'<div class="meta"><span class="pill t'+t.tier+'">T'+t.tier+'</span></div></div>';
+  });
+  h+='</div><div class="counter-inner" style="margin-top:12px"><div class="c" id="qualCount">'+draftQual.length+'/32</div><div class="lbl">qualified teams</div></div>';
+  h+='<button class="btn" id="saveQual" style="margin-top:12px">Save Group Results</button>';
+  return h;
+}
+
+/* bracket builder per KO stage */
+var draftBracket={};
+function adminBracket(){
+  var h='<p class="muted" style="font-size:13px">Build each knockout round by entering the two teams in every match, then confirm to make it visible to players. Until confirmed, players see \u201cbracket coming soon\u201d.</p>';
+  KO_KEYS.forEach(function(key){
+    var st=STAGES.filter(function(s){return s.key===key;})[0];
+    var b=state.bracket[key]||{matches:[],confirmed:false};
+    h+='<div class="divider"></div><div class="row between"><b>'+esc(st.name)+'</b>'
+      +(b.confirmed?'<span class="pill open">Confirmed</span>':'<span class="pill locked">Draft</span>')+'</div>';
+    h+='<div id="brk-'+key+'">';
+    for(var i=0;i<st.matches;i++){
+      var m=(b.matches&&b.matches[i])||["",""];
+      h+='<div style="margin-top:8px"><div class="dim" style="font-size:11px">Match '+(i+1)+'</div>'
+        +'<div class="tinp"><input class="input" data-brk="'+key+'" data-mi="'+i+'" data-side="0" placeholder="Team A" value="'+esc(m[0]||'')+'" list="teamopts" style="flex:1"></div>'
+        +'<div class="tinp"><input class="input" data-brk="'+key+'" data-mi="'+i+'" data-side="1" placeholder="Team B" value="'+esc(m[1]||'')+'" list="teamopts" style="flex:1"></div></div>';
+    }
+    h+='</div>';
+    h+='<div class="row" style="margin-top:10px;gap:8px"><button class="btn secondary small" data-savebrk="'+key+'">Save draft</button>'
+      +'<button class="btn small" data-confirmbrk="'+key+'">'+(b.confirmed?'Re-confirm':'Confirm & publish')+'</button>';
+    if(key!=="r32") h+='<button class="btn ghost small" data-autobrk="'+key+'">Auto-fill from winners</button>';
+    h+='</div>';
+  });
+  h+=teamDatalist();
+  return h;
+}
+function teamDatalist(){
+  return '<datalist id="teamopts">'+TEAMS.map(function(t){return '<option value="'+esc(t.name)+'">';}).join('')+'</datalist>';
+}
+
+/* KO results entry */
+function adminKOResults(){
+  var h='<p class="muted" style="font-size:13px">Enter the winner of each match. Only confirmed brackets appear here.</p>';
+  KO_KEYS.forEach(function(key){
+    var st=STAGES.filter(function(s){return s.key===key;})[0];
+    var b=state.bracket[key];
+    if(!b||!b.confirmed||!b.matches||!b.matches.length){
+      h+='<div class="divider"></div><b>'+esc(st.name)+'</b> <span class="dim">— confirm bracket first</span>'; return;
+    }
+    var res=(state.results.ko&&state.results.ko[key])||{};
+    h+='<div class="divider"></div><b>'+esc(st.name)+'</b> <span class="dim">('+st.pts+'pt each)</span><div id="kores-'+key+'">';
+    b.matches.forEach(function(m,i){
+      h+='<div style="margin-top:8px"><div class="dim" style="font-size:11px">Match '+(i+1)+'</div><div class="row" style="gap:8px;margin-top:4px">';
+      [0,1].forEach(function(side){
+        var team=m[side]; if(!team){ h+='<div class="dim" style="flex:1">TBD</div>'; return; }
+        var on=(res[i]===team);
+        h+='<button class="btn '+(on?'':'secondary')+' small" data-kores="'+key+'" data-mi="'+i+'" data-team="'+esc(team)+'" style="flex:1">'+esc(team)+(on?' ✓':'')+'</button>';
+      });
+      h+='</div></div>';
+    });
+    h+='</div>';
+  });
+  return h;
+}
+
+/* override */
+function adminOverride(){
+  var keys=Object.keys(state.players);
+  if(!keys.length) return '<div class="dim">No players yet.</div>';
+  var h='<p class="muted" style="font-size:13px">Add or subtract points for a player on a given stage. Stored separately from auto-scoring.</p>';
+  h+='<div class="field"><label>Player</label><select class="input" id="ovPlayer">'
+    + keys.map(function(k){return '<option value="'+esc(k)+'">'+esc(state.players[k].display||k)+'</option>';}).join('')
+    +'</select></div>';
+  h+='<div class="field"><label>Stage</label><select class="input" id="ovStage">'
+    + STAGES.map(function(s){return '<option value="'+s.key+'">'+esc(s.name)+'</option>';}).join('')
+    +'</select></div>';
+  h+='<div class="field"><label>Adjustment (e.g. 5 or -3)</label><input class="input" id="ovVal" type="number" placeholder="0"></div>';
+  h+='<button class="btn" id="ovSave" style="margin-top:12px">Apply Override</button>';
+  h+='<p class="note" id="ovCurrent"></p>';
+  return h;
+}
+
+/* submission tracker */
+function adminTracker(){
+  var keys=Object.keys(state.players);
+  if(!keys.length) return '<div class="dim">No players yet.</div>';
+  var h='';
+  STAGES.forEach(function(s){
+    h+='<div class="divider"></div><b>'+esc(s.name)+'</b><div class="statusgrid">';
+    keys.forEach(function(k){
+      var done=hasSubmitted(state.players[k],s.key);
+      h+='<div>'+esc(state.players[k].display||k)+'</div><div class="'+(done?'ok':'no')+'">'+(done?'✓ done':'— pending')+'</div>';
+    });
+    h+='</div>';
+  });
+  return h;
+}
+
+/* locks / status */
+function adminLocks(){
+  var h='';
+  if(MODE==="trial"){
+    h+='<p class="muted" style="font-size:13px">Trial mode: lock each stage manually to simulate a deadline. Locking hides others\u2019 picks until you unlock.</p>';
+  } else {
+    h+='<p class="muted" style="font-size:13px">Live mode: stages auto-lock at their deadline. You can force-lock early, or reopen for last-minute corrections (others\u2019 picks hidden again while unlocked).</p>';
+  }
+  STAGES.forEach(function(s){
+    var locked=isLocked(s.key);
+    var sub = MODE==="live" ? fmtDeadline(s.key)+(state.locks[s.key]?(" · override: "+state.locks[s.key]):"") : "";
+    h+='<div class="divider"></div><div class="row between"><div><b>'+esc(s.name)+'</b><div class="dim" style="font-size:12px">'+sub+'</div></div>'
+      +'<span class="pill '+(locked?'locked':'open')+'">'+(locked?'Locked':'Open')+'</span></div>';
+    h+='<div class="row" style="gap:8px;margin-top:8px">';
+    if(MODE==="trial"){
+      h+='<button class="btn '+(locked?'secondary':'')+' small" data-lock="'+s.key+'" data-v="1">Lock predictions</button>'
+        +'<button class="btn '+(locked?'':'secondary')+' small" data-lock="'+s.key+'" data-v="0">Unlock</button>';
+    } else {
+      h+='<button class="btn secondary small" data-lock="'+s.key+'" data-v="locked">Force lock</button>'
+        +'<button class="btn secondary small" data-lock="'+s.key+'" data-v="unlocked">Reopen</button>'
+        +'<button class="btn ghost small" data-lock="'+s.key+'" data-v="auto">Auto (deadline)</button>';
+    }
+    h+='</div>';
+  });
+  return h;
+}
+function adminDanger(){
+  return '<p class="muted" style="font-size:13px">Permanently erase all players, picks, results, brackets and locks for this '+MODE+' database. Cannot be undone.</p>'
+    +'<button class="btn danger" id="resetAll" style="margin-top:10px">Reset ALL '+MODE.toUpperCase()+' data</button>';
+}
+
+function wireAdmin(){
+  Array.prototype.forEach.call(document.querySelectorAll('[data-asec]'),function(n){
+    n.onclick=function(){ var id=n.getAttribute('data-asec'); adminOpen[id]=!adminOpen[id]; renderAdmin(); };
+  });
+  // group qualifiers
+  Array.prototype.forEach.call(document.querySelectorAll('[data-qual]'),function(n){
+    n.onclick=function(){
+      var t=n.getAttribute('data-qual'); var i=draftQual.indexOf(t);
+      if(i>=0) draftQual.splice(i,1);
+      else { if(draftQual.length>=32){toast('Already 32 selected',true);return;} draftQual.push(t); }
+      n.classList.toggle('sel'); n.querySelector('.chk').textContent=draftQual.indexOf(t)>=0?'✓':'';
+      var c=byId('qualCount'); if(c)c.textContent=draftQual.length+'/32';
+    };
+  });
+  var sq=byId('saveQual'); if(sq) sq.onclick=function(){
+    if(draftQual.length!==32){ toast('Select exactly 32 qualifiers',true); return; }
+    ref("results/group").set(draftQual).then(function(){toast('Group results saved');});
+  };
+  // bracket inputs
+  Array.prototype.forEach.call(document.querySelectorAll('[data-savebrk]'),function(b){
+    b.onclick=function(){ saveBracketDraft(b.getAttribute('data-savebrk'),false); };
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('[data-confirmbrk]'),function(b){
+    b.onclick=function(){ saveBracketDraft(b.getAttribute('data-confirmbrk'),true); };
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('[data-autobrk]'),function(b){
+    b.onclick=function(){ autoFillBracket(b.getAttribute('data-autobrk')); };
+  });
+  // KO results
+  Array.prototype.forEach.call(document.querySelectorAll('[data-kores]'),function(b){
+    b.onclick=function(){
+      var key=b.getAttribute('data-kores'), mi=b.getAttribute('data-mi'), team=b.getAttribute('data-team');
+      ref("results/ko/"+key+"/"+mi).set(team).then(function(){toast('Winner recorded');});
+    };
+  });
+  // override
+  var ov=byId('ovSave'); if(ov){
+    function showCur(){
+      var pk=byId('ovPlayer').value, sk=byId('ovStage').value;
+      var cur=overrideFor(playerObj(pk),sk);
+      byId('ovCurrent').textContent='Current override for this stage: '+cur+' pts';
+    }
+    byId('ovPlayer').onchange=showCur; byId('ovStage').onchange=showCur; showCur();
+    ov.onclick=function(){
+      var pk=byId('ovPlayer').value, sk=byId('ovStage').value, v=parseInt(byId('ovVal').value||'0',10);
+      var cur=overrideFor(playerObj(pk),sk);
+      ref("players/"+pk+"/override/"+sk).set(cur+v).then(function(){toast('Override applied');});
+    };
+  }
+  // locks
+  Array.prototype.forEach.call(document.querySelectorAll('[data-lock]'),function(b){
+    b.onclick=function(){
+      var key=b.getAttribute('data-lock'), v=b.getAttribute('data-v');
+      if(MODE==="trial"){ ref("locks/"+key).set(v==="1"); }
+      else { if(v==="auto") ref("locks/"+key).remove(); else ref("locks/"+key).set(v); }
+      toast('Stage status updated');
+    };
+  });
+  // reset
+  var ra=byId('resetAll'); if(ra) ra.onclick=function(){
+    showModal('Reset all '+MODE+' data?','This erases every player, pick, result and bracket. This cannot be undone.',
+      'Yes, erase everything', function(){
+        ref("").remove().then(function(){ toast('All data reset'); });
+      });
+  };
+}
+function saveBracketDraft(key,confirm){
+  var st=STAGES.filter(function(s){return s.key===key;})[0];
+  var matches=[];
+  for(var i=0;i<st.matches;i++){
+    var a=document.querySelector('[data-brk="'+key+'"][data-mi="'+i+'"][data-side="0"]');
+    var bb=document.querySelector('[data-brk="'+key+'"][data-mi="'+i+'"][data-side="1"]');
+    matches.push([a?a.value.trim():"", bb?bb.value.trim():""]);
+  }
+  if(confirm){
+    // validate filled
+    for(var j=0;j<matches.length;j++){ if(!matches[j][0]||!matches[j][1]){ toast('Fill both teams in every match before confirming',true); return; } }
+  }
+  ref("bracket/"+key).set({matches:matches, confirmed:!!confirm}).then(function(){
+    toast(confirm?(st.short+' bracket published'):'Draft saved');
+  });
+}
+function autoFillBracket(key){
+  // fill from previous round winners (results.ko of previous stage), pairing sequentially
+  var idx=KO_KEYS.indexOf(key);
+  if(idx<=0){ toast('No previous round',true); return; }
+  var prev=KO_KEYS[idx-1];
+  // special: final & third both come from SF. third = SF losers, final = SF winners.
+  var st=STAGES.filter(function(s){return s.key===key;})[0];
+  var matches=[];
+  if(key==="final" || key==="third"){
+    var sfB=state.bracket["sf"]; var sfR=(state.results.ko["sf"])||{};
+    if(!sfB||!sfB.matches||sfB.matches.length<2){ toast('Set & score Semi-Finals first',true); return; }
+    var winners=[], losers=[];
+    sfB.matches.forEach(function(m,i){
+      var w=sfR[i]; if(!w){ return; }
+      var l=(m[0]===w)?m[1]:m[0];
+      winners.push(w); losers.push(l);
+    });
+    if(key==="final"){ if(winners.length<2){toast('Score both semi-finals first',true);return;} matches=[[winners[0],winners[1]]]; }
+    else { if(losers.length<2){toast('Score both semi-finals first',true);return;} matches=[[losers[0],losers[1]]]; }
+  } else {
+    var prevRes=(state.results.ko[prev])||{};
+    var winners2=[];
+    var prevB=state.bracket[prev];
+    if(!prevB||!prevB.matches){ toast('Previous bracket missing',true); return; }
+    for(var i=0;i<prevB.matches.length;i++){ if(prevRes[i]) winners2.push(prevRes[i]); }
+    if(winners2.length<prevB.matches.length){ toast('Score all '+prev.toUpperCase()+' matches first',true); return; }
+    for(var k=0;k<winners2.length;k+=2){ matches.push([winners2[k], winners2[k+1]||""]); }
+  }
+  ref("bracket/"+key).set({matches:matches,confirmed:false}).then(function(){
+    toast('Auto-filled '+st.short+' — review then confirm'); renderAdmin();
+  });
+}
+
+/* ===================== MODAL ===================== */
+function showModal(title,body,confirmLabel,onConfirm){
+  var root=byId('modalRoot');
+  root.innerHTML='<div class="modal-bg"><div class="modal"><h3>'+esc(title)+'</h3><p class="muted">'+esc(body)+'</p>'
+    +'<div class="acts"><button class="btn secondary" id="mCancel">Cancel</button><button class="btn danger" id="mOk">'+esc(confirmLabel)+'</button></div></div></div>';
+  byId('mCancel').onclick=function(){ root.innerHTML=''; };
+  byId('mOk').onclick=function(){ root.innerHTML=''; onConfirm(); };
+}
+
+/* ===================== AUTH / NAV ===================== */
+function doLogin(name){
+  var disp=name.trim();
+  if(!disp){ toast('Enter your name',true); return; }
+  state.user=nkey(disp); state.displayName=disp; state.isAdmin=false; state.page="home";
+  // register/refresh profile
+  ref("players/"+state.user+"/display").set(disp);
+  showApp();
+}
+function doAdmin(pin){
+  if(pin!==ADMIN_PIN){ toast('Wrong PIN',true); return; }
+  state.isAdmin=true; state.user="__admin__"; state.displayName=null; state.page="admin";
+  showApp();
+}
+function showApp(){
+  byId('loginView').classList.add('hidden');
+  byId('appView').classList.remove('hidden');
+  if(!state._bound){ bindData(); state._bound=true; }
+  render();
+}
+function logout(){
+  state.user=null; state.displayName=null; state.isAdmin=false; currentStage=null; state.page="home";
+  byId('appView').classList.add('hidden');
+  byId('loginView').classList.remove('hidden');
+  byId('nameInput').value=''; var pin=byId('pinInput'); if(pin)pin.value='';
+}
+
+/* wire login screen */
+byId('enterBtn').onclick=function(){ doLogin(byId('nameInput').value); };
+byId('nameInput').addEventListener('keydown',function(e){ if(e.key==='Enter') doLogin(this.value); });
+byId('adminToggle').onclick=function(){ byId('adminLogin').classList.toggle('hidden'); };
+byId('adminEnterBtn').onclick=function(){ doAdmin(byId('pinInput').value); };
+byId('pinInput')&&byId('pinInput').addEventListener('keydown',function(e){ if(e.key==='Enter') doAdmin(this.value); });
+byId('logoutBtn').onclick=logout;
+Array.prototype.forEach.call(document.querySelectorAll('#tabbar button'),function(b){
+  b.onclick=function(){ state.page=b.getAttribute('data-page'); if(state.page!=="picks") currentStage=null; render(); };
+});
+
+/* boot */
+if(!db){ document.body.innerHTML='<div style="padding:40px;text-align:center;color:#fb7185;font-family:sans-serif">Could not connect to Firebase. Check your internet connection and reload.</div>'; }
+</script>
 </body>
 </html>
