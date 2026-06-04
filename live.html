@@ -5,20 +5,28 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
   <title>FIFA World Cup 2026 — Prediction Game</title>
   <style>
-    * {{ box-sizing: border-box; margin: 0; padding: 0; }}
-    html, body {{ min-height: 100%; }}
-    body {{ background: #0a1733; }}
-    #root-loading {{
-      display: flex; flex-direction: column; align-items: center;
-      justify-content: center; min-height: 100vh;
-      color: #9db0d6; font-family: sans-serif; gap: 12px;
-    }}
-    .spinner {{
-      width: 32px; height: 32px; border: 3px solid #27406f;
-      border-top-color: #f4c430; border-radius: 50%;
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { min-height: 100%; }
+    body { background: #0a1733; }
+    #root-loading {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      color: #9db0d6;
+      font-family: sans-serif;
+      gap: 12px;
+    }
+    .spinner {
+      width: 32px;
+      height: 32px;
+      border: 3px solid #27406f;
+      border-top-color: #f4c430;
+      border-radius: 50%;
       animation: spin 0.8s linear infinite;
-    }}
-    @keyframes spin {{ to {{ transform: rotate(360deg); }} }}
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 
   <!-- React 18 -->
@@ -34,18 +42,20 @@
   <div id="root">
     <div id="root-loading">
       <div class="spinner"></div>
-      <div>Loading World Cup 2026 Predictions…</div>
+      <div>Loading World Cup 2026 Predictions&hellip;</div>
     </div>
   </div>
 
-  <!-- ============================================================
-       STEP 1 — PASTE YOUR FIREBASE CONFIG BELOW
-       Get this from:  Firebase Console → Your Project
-                       → Project Settings (gear icon) → Your apps
-                       → Web app → SDK setup and configuration
-       ============================================================ -->
+  <!--
+  ================================================================
+  PASTE YOUR FIREBASE CONFIG BELOW
+  Get this from: Firebase Console > Your Project
+                 > Project Settings (gear icon) > Your apps
+                 > Web app > SDK setup and configuration
+  ================================================================
+  -->
   <script>
-    var firebaseConfig = {{
+    var firebaseConfig = {
       apiKey:            "AIzaSyCbBo8Tgv3wp5pGWZWoCpxnkvVTPsJp05U",
       authDomain:        "genesis-world-cup.firebaseapp.com",
       databaseURL:       "https://genesis-world-cup-default-rtdb.asia-southeast1.firebasedatabase.app",
@@ -53,19 +63,19 @@
       storageBucket:     "genesis-world-cup.firebasestorage.app",
       messagingSenderId: "872426143339",
       appId:             "1:872426143339:web:330745b297e1be849e7b2e"
-    }};
-    // ============================================================
+    };
+    // ================================================================
 
-    var __configured = firebaseConfig.apiKey !== "AIzaSyCbBo8Tgv3wp5pGWZWoCpxnkvVTPsJp05U";
-    if (__configured) {{
+    var __configured = (firebaseConfig.apiKey !== "AIzaSyCbBo8Tgv3wp5pGWZWoCpxnkvVTPsJp05U");
+    if (__configured) {
       firebase.initializeApp(firebaseConfig);
       window.__db = firebase.database();
-    }} else {{
+    } else {
       window.__db = null;
-    }}
+    }
   </script>
 
-  <!-- App code (Babel compiles this from JSX to plain JS automatically) -->
+  <!-- App (Babel compiles the JSX automatically on load) -->
   <script type="text/babel" data-presets="react">
     const { useState, useEffect, useRef, Fragment } = React;
 
