@@ -659,7 +659,7 @@ function renderPicks(){
   });
 }
 function openStage(key){
-  state.page="picks"; currentStage=key; draftChampionSeeded=false; render();
+  state.page="picks"; currentStage=key; draftChampionSeeded=false; draftKOSeeded=false; render();
 }
 function backToPicks(){ currentStage=null; render(); }
 
@@ -763,10 +763,11 @@ function updateGrpCounter(){
 
 /* ----- KO editor ----- */
 var draftKO={};
+var draftKOSeeded=false;
 function renderKOEditor(key,locked){
   var st=STAGES.filter(function(s){return s.key===key;})[0];
   var p=playerObj(state.user);
-  draftKO=JSON.parse(JSON.stringify((p.ko&&p.ko[key])||{}));
+  if(!draftKOSeeded){ draftKO=JSON.parse(JSON.stringify((p.ko&&p.ko[key])||{})); draftKOSeeded=true; }
   byIdSafeDesc("Pick the winner of each match. "+st.pts+" points per correct winner.");
   var b=state.bracket[key];
   if(!b || !b.confirmed || !b.matches || !b.matches.length){
