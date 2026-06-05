@@ -347,7 +347,7 @@ var STAGES = [
   {key:"r16",      name:"Round of 16",    short:"R16", kind:"ko", matches:8,  pts:4},
   {key:"qf",       name:"Quarter-Finals", short:"QF",  kind:"ko", matches:4,  pts:7},
   {key:"sf",       name:"Semi-Finals",    short:"SF",  kind:"ko", matches:2,  pts:12},
-  {key:"third",    name:"3rd Place Match",short:"3rd", kind:"ko", matches:1,  pts:15},
+  {key:"third",    name:"3rd Place Match",short:"3rd", kind:"ko", matches:1,  pts:7},
   {key:"final",    name:"Final",          short:"Final",kind:"ko",matches:1,  pts:25}
 ];
 var KO_KEYS = ["r32","r16","qf","sf","third","final"];
@@ -430,7 +430,7 @@ function championPoints(p){
   if(!finalWinner || p.champion!==finalWinner) return 0;
   var t=teamByName(p.champion);
   if(!t) return 0;
-  return t.prevWinner?25:75;
+  return t.prevWinner?25:50;
 }
 function groupPoints(p){
   if(!p.group||!state.results.group||!state.results.group.length) return 0;
@@ -684,7 +684,7 @@ var draftChampionSeeded=false;
 function renderChampionEditor(locked){
   var p=playerObj(state.user);
   if(!draftChampionSeeded){ draftChampion = p.champion||null; draftChampionSeeded=true; }
-  byIdSafeDesc("Pick one team you think will win the World Cup. Previous winners earn 25 points, underdogs earn 75 points if correct.");
+  byIdSafeDesc("Pick one team you think will win the World Cup. Previous winners earn 25 points, underdogs earn 50 points if correct.");
   var sorted=TEAMS.slice().sort(function(a,b){return a.name.localeCompare(b.name);});
   var resultWinner=(state.results.ko.final&&state.results.ko.final["0"])||null;
   var h='<div class="teamlist stagger">';
@@ -699,7 +699,7 @@ function renderChampionEditor(locked){
     h+='<div class="'+cls+'" data-champ="'+esc(t.name)+'">'
       +'<div class="chk">'+(sel?'✓':'')+'</div>'
       +'<div class="nm">'+esc(t.name)+'</div>'
-      +'<div class="meta">'+(t.prevWinner?'<span class="pill prev">Prev Winner · 25</span>':'<span class="pill under">Underdog · 75</span>')+'</div>'
+      +'<div class="meta">'+(t.prevWinner?'<span class="pill prev">Prev Winner · 25</span>':'<span class="pill under">Underdog · 50</span>')+'</div>'
       + res +'</div>';
   });
   h+='</div>';
