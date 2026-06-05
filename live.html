@@ -659,7 +659,7 @@ function renderPicks(){
   });
 }
 function openStage(key){
-  state.page="picks"; currentStage=key; render();
+  state.page="picks"; currentStage=key; draftChampionSeeded=false; render();
 }
 function backToPicks(){ currentStage=null; render(); }
 
@@ -680,9 +680,10 @@ function renderStageEditor(key){
 
 /* ----- Champion editor ----- */
 var draftChampion=null;
+var draftChampionSeeded=false;
 function renderChampionEditor(locked){
   var p=playerObj(state.user);
-  draftChampion = p.champion||null;
+  if(!draftChampionSeeded){ draftChampion = p.champion||null; draftChampionSeeded=true; }
   byIdSafeDesc("Pick one team you think will win the World Cup. Previous winners earn 25 points, underdogs earn 75 points if correct.");
   var sorted=TEAMS.slice().sort(function(a,b){return a.name.localeCompare(b.name);});
   var resultWinner=(state.results.ko.final&&state.results.ko.final["0"])||null;
