@@ -406,10 +406,72 @@ function lockReasonLabel(key){
 }
 
 /* ===================== DATA BINDING ===================== */
+/* Firebase Realtime DB coerces objects with sequential integer keys into JS
+   arrays, and sparse integer keys into arrays containing null holes. It can
+   also hand back an object where we expect an array (and vice versa). To keep
+   all downstream scoring/render code simple and crash-proof, we normalize
+   every shape here at the boundary. */
+function normIndexMap(v){
+  // Returns a plain object { "0": val, ... } dropping null/undefined holes.
+  var out={};
+  if(!v) return out;
+  if(Array.isArray(v)){
+    for(var i=0;i<v.length;i++){ if(v[i]!==null&&v[i]!==undefined&&v[i]!=="") out[i]=v[i]; }
+  } else if(typeof v==="object"){
+    Object.keys(v).forEach(function(k){ if(v[k]!==null&&v[k]!==undefined&&v[k]!=="") out[k]=v[k]; });
+  }
+  return out;
+}
+function normMatches(v){
+  // Returns a dense array of [teamA, teamB] pairs, preserving match index,
+  // with null holes turned into ["",""] so index alignment is kept.
+  if(!v) return [];
+  var keys, arr=[];
+  if(Array.isArray(v)) keys=v.map(function(_,i){return i;});
+  else keys=Object.keys(v).map(Number).sort(function(a,b){return a-b;});
+  var max=keys.length?Math.max.apply(null,keys):-1;
+  for(var i=0;i<=max;i++){
+    var m=v[i];
+    if(!m || (!Array.isArray(m) && typeof m!=="object")) { arr.push(["",""]); continue; }
+    arr.push([ (m[0]!=null?m[0]:""), (m[1]!=null?m[1]:"") ]);
+  }
+  return arr;
+}
+function normBracket(v){
+  var out={};
+  if(!v||typeof v!=="object") return out;
+  Object.keys(v).forEach(function(key){
+    var b=v[key]||{};
+    out[key]={ confirmed:!!b.confirmed, matches:normMatches(b.matches) };
+  });
+  return out;
+}
+function normPlayers(v){
+  var out={};
+  if(!v||typeof v!=="object") return out;
+  Object.keys(v).forEach(function(k){
+    var p=v[k]||{};
+    var np={ display:p.display||k };
+    if(p.champion) np.champion=p.champion;
+    if(p.group){ np.group = Array.isArray(p.group)?p.group.filter(function(x){return x!=null&&x!=="";}):Object.keys(normIndexMap(p.group)).map(function(kk){return p.group[kk];}); }
+    np.ko={};
+    if(p.ko&&typeof p.ko==="object"){ Object.keys(p.ko).forEach(function(sk){ np.ko[sk]=normIndexMap(p.ko[sk]); }); }
+    if(p.override&&typeof p.override==="object"){ np.override={}; Object.keys(p.override).forEach(function(sk){ var n=p.override[sk]; if(typeof n==="number") np.override[sk]=n; }); }
+    out[k]=np;
+  });
+  return out;
+}
+function normResults(v){
+  v=v||{};
+  var group = v.group ? (Array.isArray(v.group)?v.group.filter(function(x){return x!=null&&x!=="";}):Object.keys(normIndexMap(v.group)).map(function(k){return v.group[k];})) : [];
+  var ko={};
+  if(v.ko&&typeof v.ko==="object"){ Object.keys(v.ko).forEach(function(sk){ ko[sk]=normIndexMap(v.ko[sk]); }); }
+  return {group:group, ko:ko};
+}
 function bindData(){
-  ref("players").on("value", function(s){ state.players = s.val()||{}; onData(); });
-  ref("results").on("value", function(s){ var v=s.val()||{}; state.results={group:v.group||[], ko:v.ko||{}}; onData(); });
-  ref("bracket").on("value", function(s){ state.bracket = s.val()||{}; onData(); });
+  ref("players").on("value", function(s){ state.players = normPlayers(s.val()); onData(); });
+  ref("results").on("value", function(s){ state.results = normResults(s.val()); onData(); });
+  ref("bracket").on("value", function(s){ state.bracket = normBracket(s.val()); onData(); });
   ref("locks").on("value",   function(s){ state.locks   = s.val()||{}; onData(); });
 }
 var _dataTimer=null;
