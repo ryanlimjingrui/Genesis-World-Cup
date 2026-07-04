@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Firebase Connection Test</title>
+<style>
+  body{font-family:system-ui,sans-serif;max-width:640px;margin:0 auto;padding:20px;background:#0a0e1a;color:#eef2ff;line-height:1.5}
+  h1{font-size:20px}
+  .line{padding:10px 12px;border-radius:8px;margin:8px 0;background:#161d33;border:1px solid #28324f;font-size:14px}
+  .ok{border-color:#34d399;color:#34d399}
+  .bad{border-color:#fb7185;color:#fb7185}
+  .wait{border-color:#f5c542;color:#f5c542}
+  pre{background:#000;padding:12px;border-radius:8px;overflow:auto;font-size:12px;white-space:pre-wrap;word-break:break-word}
+  b{color:#f5c542}
+</style>
+</head>
+<body>
+<h1>🔎 Firebase Connection Test</h1>
+<p>This page tests <b>only</b> the Firebase connection — none of the game logic. Watch the lines below.</p>
+<div id="log"></div>
+<h3>Raw result</h3>
+<pre id="raw">waiting…</pre>
+
+<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
+<script>
+var firebaseConfig = {
+  apiKey: "AIzaSyCbBo8Tgv3wp5pGWZWoCpxnkvVTPsJp05U",
+  authDomain: "genesis-world-cup.firebaseapp.com",
+  databaseURL: "https://genesis-world-cup-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "genesis-world-cup",
+  storageBucket: "genesis-world-cup.firebasestorage.app",
+  messagingSenderId: "872426143339",
+  appId: "1:872426143339:web:330745b297e1be849e7b2e"
+};
+
+function log(msg, cls){
+  var d=document.createElement('div');
+  d.className='line '+(cls||'');
+  d.innerHTML=msg;
+  document.getElementById('log').appendChild(d);
+}
+
+log("1. Scripts loaded. typeof firebase = <b>"+(typeof firebase)+"</b>", typeof firebase==="undefined"?"bad":"ok");
+
+if(typeof firebase==="undefined"){
+  log("❌ Firebase library did not load. This is a network/CDN or content-blocker problem, not a rules problem.", "bad");
+} else {
+  try {
+    var app=firebase.initializeApp(firebaseConfig);
+    var db=firebase.database();
+    log("2. Firebase initialised OK.", "ok");
+
+    // connection state
+    db.ref(".info/connected").on("value", function(s){
+      if(s.val()===true) log("3. ✅ CONNECTED to Firebase servers.", "ok");
+      else log("3. …not yet connected (this can flash before connecting)", "wait");
+    });
+
+    // try to read the live data path
+    var done=false;
+    log("4. Attempting to READ /wc26_live …", "wait");
+    db.ref("wc26_live").once("value")
+      .then(function(snap){
+        done=true;
+        var val=snap.val();
+        log("5. ✅ READ SUCCEEDED. The database rules ALLOW reads.", "ok");
+        log("   Players found: <b>"+(val&&val.players?Object.keys(val.players).length:0)+"</b>", "ok");
+        document.getElementById('raw').textContent=JSON.stringify(val,null,2) || "(empty)";
+      })
+      .catch(function(err){
+        done=true;
+        log("5. ❌ READ FAILED: <b>"+err.code+"</b>", "bad");
+        log("   Message: "+err.message, "bad");
+        if(String(err.code).indexOf("permission")>=0 || String(err.message).toLowerCase().indexOf("permission")>=0){
+          log("➡️ DIAGNOSIS: The Firebase <b>security rules are blocking reads</b>. Go to Firebase console → Realtime Database → Rules, set <b>.read</b> and <b>.write</b> to <b>true</b>, Publish, then reload.", "bad");
+        }
+        document.getElementById('raw').textContent=(err.code||'')+"\n"+err.message;
+      });
+
+    // timeout watchdog
+    setTimeout(function(){
+      if(!done){
+        log("5. ⏱️ READ TIMED OUT after 10s with no success AND no error.", "bad");
+        log("➡️ DIAGNOSIS: The request never reached the server. This is almost certainly a <b>network block</b> — a firewall, VPN, corporate/school network, ad-blocker, or browser extension is blocking Firebase. Try: (a) mobile data instead of WiFi, (b) a different browser, (c) disabling extensions/ad-blockers.", "bad");
+      }
+    }, 10000);
+
+  } catch(e){
+    log("2. ❌ Firebase init threw: "+e.message, "bad");
+    document.getElementById('raw').textContent=e.stack;
+  }
+}
+</script>
+</body>
+</html>
