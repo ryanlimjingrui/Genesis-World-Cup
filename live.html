@@ -468,11 +468,40 @@ function normResults(v){
   if(v.ko&&typeof v.ko==="object"){ Object.keys(v.ko).forEach(function(sk){ ko[sk]=normIndexMap(v.ko[sk]); }); }
   return {group:group, ko:ko};
 }
+function dbError(where,err){
+  console.error("Firebase read failed at "+where, err);
+  var msg=(err&&err.message)?err.message:String(err);
+  var box=byId('page-'+state.page);
+  if(box){
+    box.innerHTML='<div class="card"><h2 style="color:var(--red)">Can\u2019t load the game data</h2>'
+      +'<p class="muted" style="margin-top:8px">The app connected but the database refused the request. This is almost always the Firebase security rules having expired or being set to deny reads.</p>'
+      +'<p class="muted" style="margin-top:8px">Error detail: <b>'+esc(msg)+'</b></p>'
+      +'<p class="note" style="margin-top:10px">Fix: open the Firebase console \u2192 Realtime Database \u2192 Rules, and set both <b>.read</b> and <b>.write</b> to <b>true</b>, then Publish. Reload this page afterwards.</p></div>';
+  }
+}
 function bindData(){
-  ref("players").on("value", function(s){ state.players = normPlayers(s.val()); onData(); });
-  ref("results").on("value", function(s){ state.results = normResults(s.val()); onData(); });
-  ref("bracket").on("value", function(s){ state.bracket = normBracket(s.val()); onData(); });
-  ref("locks").on("value",   function(s){ state.locks   = s.val()||{}; onData(); });
+  ref("players").on("value", function(s){ state.players = normPlayers(s.val()); onData(); }, function(e){ dbError("players",e); });
+  ref("results").on("value", function(s){ state.results = normResults(s.val()); onData(); }, function(e){ dbError("results",e); });
+  ref("bracket").on("value", function(s){ state.bracket = normBracket(s.val()); onData(); }, function(e){ dbError("bracket",e); });
+  ref("locks").on("value",   function(s){ state.locks   = s.val()||{}; onData(); }, function(e){ dbError("locks",e); });
+  // Watchdog: if no data arrives within 10s, surface a diagnostic instead of hanging on the spinner.
+  setTimeout(function(){
+    if(!state.loaded){
+      var box=byId('page-'+state.page);
+      if(box) box.innerHTML='<div class="card"><h2 style="color:var(--gold)">Still connecting\u2026</h2>'
+        +'<p class="muted" style="margin-top:8px">The game data hasn\u2019t loaded after 10 seconds. This usually means one of:</p>'
+        +'<p class="note" style="margin-top:8px">1. The Firebase security rules have expired or deny reads \u2014 open Firebase console \u2192 Realtime Database \u2192 Rules and set <b>.read</b> and <b>.write</b> to <b>true</b>, then Publish.<br>'
+        +'2. No internet connection \u2014 check your network and reload.<br>'
+        +'3. A browser cache issue \u2014 fully close and reopen the tab, or try a private window.</p>'
+        +'<button class="btn" style="margin-top:14px" onclick="location.reload()">Reload</button></div>';
+    }
+  },10000);
+  // Connection state monitor (for console visibility)
+  try{
+    db.ref(".info/connected").on("value", function(s){
+      console.log("Firebase connection:", s.val()===true?"CONNECTED":"disconnected");
+    });
+  }catch(e){}
 }
 var _dataTimer=null;
 function onData(){
